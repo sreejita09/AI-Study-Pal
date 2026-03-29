@@ -37,6 +37,8 @@ function scheduleDailyNotifications() {
 
 async function start() {
   try {
+    console.log("[startup] CLIENT_URL:", process.env.CLIENT_URL || "(NOT SET — CORS will block production frontend)");
+    console.log("[startup] NODE_ENV:", process.env.NODE_ENV || "development");
     console.log("[startup] Connecting to MongoDB...");
     await connectDb();
 
