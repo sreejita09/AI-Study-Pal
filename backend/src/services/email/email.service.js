@@ -58,7 +58,7 @@ async function sendMail({ to, subject, html }) {
   }
 
   const info = await transport.sendMail({
-    from: env.mailFrom || env.smtpUser,
+    from: process.env.MAIL_FROM || `AI Study Pal <${env.smtpUser}>`,
     to,
     subject,
     html,
