@@ -36,3 +36,16 @@ backend/uploads/
 .env
 frontend/.env
 backend/.env
+
+# Build outputs
+dist/
+build/
+
+# Vite / tooling cache
+.vite/
+.cache/
+.turbo/
+
+# Python venvs
+.venv/
+.venv-1/
