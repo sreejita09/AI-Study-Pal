@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Global smooth theme transitions ── */
+*, *::before, *::after {
+  transition-property: background-color, color, border-color, box-shadow, opacity;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* ── Theme tokens — dark (default) ── */
+:root,
+[data-theme="dark"] {
+  /* accent — overridden by ThemeContext JS on load */
+  --accent:        #3B82F6;
+  --accent-base:   #3B82F6;
+  --accent-light:  #93C5FD;
+  --accent-soft:   rgba(59, 130, 246, 0.15);
+  --accent-dim:    rgba(59, 130, 246, 0.12);
+  --accent-faint:  rgba(59, 130, 246, 0.06);
+  --accent-border: rgba(59, 130, 246, 0.40);
+  --accent-r: 59;
+  --accent-g: 130;
+  --accent-b: 246;
+
+  /* semantic bg tokens (per spec) */
+  --bg-primary:   #0B0F14;
+  --bg-secondary: #111827;
+
+  /* surface tokens */
+  --bg-base:    #0B0F14;
+  --bg-panel:   #111827;
+  --bg-surface: #151D2E;
+  --bg-card:    #1A2235;
+  --bg-hover:   #1F2A40;
+  --border-color: #1F2937;
+
+  /* semantic text tokens */
+  --text-primary:   #E5E7EB;
+  --text-secondary: #9CA3AF;
+  --text-muted:     #9CA3AF;
+  --text-faint:     #4B5563;
+
+  /* shorthand aliases */
+  --bg:   var(--bg-base);
+  --text: var(--text-primary);
+  --card: var(--bg-card);
+
+  color-scheme: dark;
+}
+
+/* ── Light theme overrides ── */
+html.light,
+[data-theme="light"] {
+  /* semantic bg tokens (per spec) */
+  --bg-primary:   #FFFFFF;
+  --bg-secondary: #F9FAFB;
+
+  /* surface tokens */
+  --bg-base:    #F9FAFB;
+  --bg-panel:   #FFFFFF;
+  --bg-surface: #F3F4F6;
+  --bg-card:    #FFFFFF;
+  --bg-hover:   #E5E7EB;
+  --border-color: #E5E7EB;
+
+  /* semantic text tokens */
+  --text-primary:   #111827;
+  --text-secondary: #6B7280;
+  --text-muted:     #6B7280;
+  --text-faint:     #D1D5DB;
+
+  /* shorthand aliases */
+  --bg:   var(--bg-base);
+  --text: var(--text-primary);
+  --card: var(--bg-card);
+
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg-base);
+  background-image: radial-gradient(
+    ellipse 60% 40% at 0% 0%,
+    rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.06),
+    transparent
+  );
+  color: var(--text-primary);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+/* ── Motivation Card animations ── */
+
+.motivation-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: motivFadeIn 0.2s ease-out;
+}
+
+.motivation-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.75rem 2rem 1.5rem;
+  min-width: 260px;
+  max-width: 340px;
+  border-radius: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: motivScaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes motivFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes motivScaleIn {
+  from { opacity: 0; transform: scale(0.85) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes motivShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-3px); }
+  40%      { transform: translateX(3px); }
+  60%      { transform: translateX(-2px); }
+  80%      { transform: translateX(2px); }
+}
+
+.motivation-shake {
+  animation: motivScaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+             motivShake 0.4s ease-in-out 0.3s;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 999px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Notification dropdown animation ── */
+.notif-dropdown {
+  animation: notifSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
+}
+
+@keyframes notifSlideIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Accent utility helpers ── */
+.accent-bg     { background-color: var(--accent) !important; }
+.accent-text   { color: var(--accent) !important; }
+.accent-border { border-color: var(--accent) !important; }
+.accent-ring   { box-shadow: 0 0 0 2px var(--accent) !important; }
+/* range input thumb color follows accent */
+.range-accent  { accent-color: var(--accent); }

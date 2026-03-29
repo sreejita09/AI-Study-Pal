@@ -1,0 +1,49 @@
+# Core Flask dependencies
+Flask==2.3.0
+Flask-SQLAlchemy==3.0.5
+Flask-Login==0.6.2
+Flask-Mail==0.9.1
+Werkzeug==2.3.0
+
+# Database
+SQLAlchemy==2.0.19
+
+# File handling
+PyPDF2==3.0.1
+PyMuPDF==1.23.0
+python-docx==0.8.11
+pytesseract==0.3.10
+Pillow==10.0.0
+
+# Data processing and ML
+pandas==2.0.3
+numpy==1.24.3
+scikit-learn==1.3.0
+nltk==3.8.1
+matplotlib==3.7.2
+
+# Deep Learning (optional - can be heavy)
+# torch>=2.0.0
+# tensorflow>=2.13.0
+# transformers>=4.30.0
+# spacy>=3.6.0
+
+# Production deployment
+gunicorn==21.2.0
+python-dotenv==1.0.0
+
+# Testing
+pytest==7.4.0
+pytest-cov==4.1.0
+
+# Caching and optimization
+python-magic==0.4.27
+
+# Monitoring and logging (optional)
+# sentry-sdk>=1.28.0
+# redis>=5.0.0
+
+# Development quality
+black==23.7.0
+flake8==6.0.0
+isort==5.12.0

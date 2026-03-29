@@ -1,0 +1,583 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  Sparkles, Loader2, ChevronLeft, ChevronRight, Check, Square,
+  Flame, Trophy, Clock, CalendarDays, Target, Play, Pause, RotateCcw,
+  Bell, BellOff, CheckCircle2, Circle, ChevronDown, Zap
+} from "lucide-react";
+import toast from "react-hot-toast";
+import api from "../../lib/api";
+
+/* ── helpers ─────────────────────────────────────── */
+function loadLS(key, fallback) {
+  try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch { return fallback; }
+}
+function saveLS(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function dateKey(d = new Date()) { return d.toISOString().slice(0, 10); }
+function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+function isSameDay(a, b) { return dateKey(a) === dateKey(b); }
+function daysArray(year, month) {
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  const days = [];
+  // pad start
+  for (let i = 0; i < first.getDay(); i++) days.push(null);
+  for (let d = 1; d <= last.getDate(); d++) days.push(new Date(year, month, d));
+  return days;
+}
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const WEEKDAYS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+
+export default function StudyMode() {
+  /* ── state ──────────────────────────────────────── */
+  // plan generator inputs
+  const [subject, setSubject] = useState("");
+  const [planDays, setPlanDays] = useState("7");
+  const [difficulty, setDifficulty] = useState("medium");
+  const [generating, setGenerating] = useState(false);
+
+  // tasks: { "2026-03-27": [{ text, done, subtasks:[{text,done}] }] }
+  const [tasks, setTasks] = useState(() => loadLS("sp_study_tasks", {}));
+  // deadline (exam date)
+  const [deadline, setDeadline] = useState(() => loadLS("sp_deadline", ""));
+  // streak
+  const [streak, setStreak] = useState(() => loadLS("sp_streak", 0));
+  const [lastCompletedDate, setLastCompletedDate] = useState(() => loadLS("sp_last_completed", ""));
+  // calendar navigation
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
+  const [selectedDate, setSelectedDate] = useState(dateKey());
+  // expanding subtasks
+  const [expandedTask, setExpandedTask] = useState(null);
+  const [expandingIdx, setExpandingIdx] = useState(null);
+  // reminders
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
+
+  // persist
+  useEffect(() => { saveLS("sp_study_tasks", tasks); }, [tasks]);
+  useEffect(() => { saveLS("sp_deadline", deadline); }, [deadline]);
+  useEffect(() => { saveLS("sp_streak", streak); }, [streak]);
+  useEffect(() => { saveLS("sp_last_completed", lastCompletedDate); }, [lastCompletedDate]);
+
+  /* ── derived ────────────────────────────────────── */
+  const todayKey = dateKey();
+  const selectedTasks = tasks[selectedDate] || [];
+  const totalToday = selectedTasks.length;
+  const doneToday = selectedTasks.filter((t) => t.done).length;
+
+  // weekly stats
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  let weekTotal = 0, weekDone = 0;
+  for (let i = 0; i < 7; i++) {
+    const dk = dateKey(addDays(weekStart, i));
+    const dt = tasks[dk] || [];
+    weekTotal += dt.length;
+    weekDone += dt.filter((t) => t.done).length;
+  }
+
+  // deadline countdown
+  const daysLeft = deadline
+    ? Math.max(0, Math.ceil((new Date(deadline) - new Date()) / 86400000))
+    : null;
+
+  /* ── streak calculation ─────────────────────────── */
+  useEffect(() => {
+    const today = dateKey();
+    const todayTasks = tasks[today] || [];
+    if (todayTasks.length > 0 && todayTasks.every((t) => t.done)) {
+      if (lastCompletedDate !== today) {
+        // check if yesterday was completed for streak continuation
+        const yesterday = dateKey(addDays(new Date(), -1));
+        if (lastCompletedDate === yesterday) {
+          setStreak((s) => s + 1);
+        } else if (lastCompletedDate !== today) {
+          setStreak(1);
+        }
+        setLastCompletedDate(today);
+      }
+    }
+  }, [tasks]);
+
+  /* ── task handlers ──────────────────────────────── */
+  const toggleTask = (dateStr, idx) => {
+    setTasks((prev) => {
+      const dayTasks = [...(prev[dateStr] || [])];
+      dayTasks[idx] = { ...dayTasks[idx], done: !dayTasks[idx].done };
+      return { ...prev, [dateStr]: dayTasks };
+    });
+  };
+
+  const toggleSubtask = (dateStr, taskIdx, subIdx) => {
+    setTasks((prev) => {
+      const dayTasks = [...(prev[dateStr] || [])];
+      const task = { ...dayTasks[taskIdx] };
+      const subs = [...(task.subtasks || [])];
+      subs[subIdx] = { ...subs[subIdx], done: !subs[subIdx].done };
+      task.subtasks = subs;
+      // auto-complete parent if all subtasks done
+      if (subs.length > 0 && subs.every((s) => s.done)) task.done = true;
+      dayTasks[taskIdx] = task;
+      return { ...prev, [dateStr]: dayTasks };
+    });
+  };
+
+  /* ── AI: generate study plan ────────────────────── */
+  const handleGeneratePlan = async () => {
+    if (!subject.trim()) { toast.error("Enter a subject"); return; }
+    setGenerating(true);
+    try {
+      const { data } = await api.post("/ai/generate", {
+        text: subject.trim(),
+        mode: "studyplan",
+        days: Number(planDays) || 7,
+        difficulty,
+      });
+      const plan = data.result;
+      if (!Array.isArray(plan)) throw new Error("Invalid plan format");
+
+      // Build tasks from the plan, starting from tomorrow
+      const newTasks = { ...tasks };
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() + 1);
+      plan.forEach((dayPlan) => {
+        const dk = dateKey(addDays(startDate, dayPlan.day - 1));
+        newTasks[dk] = (dayPlan.tasks || []).map((t) => ({ text: t, done: false, subtasks: [] }));
+      });
+      setTasks(newTasks);
+      // jump calendar to first day
+      const firstDay = addDays(startDate, 0);
+      setCalMonth(firstDay.getMonth());
+      setCalYear(firstDay.getFullYear());
+      setSelectedDate(dateKey(firstDay));
+      toast.success(`Study plan created: ${plan.length} days!`, { id: "plan-ok" });
+    } catch (err) {
+      console.error("Plan generation error:", err);
+      toast.error(err.response?.data?.error || "Failed to generate plan", { id: "plan-err" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  /* ── AI: expand topic into micro-tasks ──────────── */
+  const expandToMicroTasks = async (dateStr, idx) => {
+    const task = tasks[dateStr]?.[idx];
+    if (!task || (task.subtasks && task.subtasks.length > 0)) {
+      setExpandedTask(expandedTask === `${dateStr}-${idx}` ? null : `${dateStr}-${idx}`);
+      return;
+    }
+    setExpandingIdx(idx);
+    try {
+      const { data } = await api.post("/ai/generate", {
+        text: task.text,
+        mode: "microtasks",
+      });
+      const subtasks = Array.isArray(data.result)
+        ? data.result.map((t) => ({ text: t, done: false }))
+        : [];
+      if (subtasks.length === 0) throw new Error("No subtasks");
+      setTasks((prev) => {
+        const dayTasks = [...(prev[dateStr] || [])];
+        dayTasks[idx] = { ...dayTasks[idx], subtasks };
+        return { ...prev, [dateStr]: dayTasks };
+      });
+      setExpandedTask(`${dateStr}-${idx}`);
+    } catch {
+      toast.error("Failed to break down task");
+    } finally {
+      setExpandingIdx(null);
+    }
+  };
+
+  /* ── reminders ──────────────────────────────────── */
+  const enableReminders = async () => {
+    if (!("Notification" in window)) { toast.error("Notifications not supported"); return; }
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") {
+      setRemindersEnabled(true);
+      toast.success("Reminders enabled!", { id: "remind-on" });
+    } else {
+      toast.error("Permission denied");
+    }
+  };
+
+  // Check reminders every minute
+  useEffect(() => {
+    if (!remindersEnabled) return;
+    const id = setInterval(() => {
+      const now = new Date();
+      const todayTasks = tasks[dateKey(now)] || [];
+      const pending = todayTasks.filter((t) => !t.done);
+      if (pending.length > 0 && now.getMinutes() === 0) {
+        new Notification("AI Study Pal", {
+          body: `You have ${pending.length} pending task${pending.length > 1 ? "s" : ""} today!`,
+          icon: "/favicon.ico",
+        });
+      }
+    }, 60000);
+    return () => clearInterval(id);
+  }, [remindersEnabled, tasks]);
+
+  /* ── calendar render data ───────────────────────── */
+  const calDays = daysArray(calYear, calMonth);
+  const prevMonth = () => { if (calMonth === 0) { setCalMonth(11); setCalYear((y) => y - 1); } else setCalMonth((m) => m - 1); };
+  const nextMonth = () => { if (calMonth === 11) { setCalMonth(0); setCalYear((y) => y + 1); } else setCalMonth((m) => m + 1); };
+
+  return (
+    <div className="space-y-6">
+      {/* ── Weekly Dashboard Cards ──────────────────── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard icon={CheckCircle2} color="text-green-400" bg="bg-green-400/10" label="This Week" value={`${weekDone}/${weekTotal}`} />
+        <StatCard icon={Flame} color="text-orange-400" bg="bg-orange-400/10" label="Streak" value={`${streak} day${streak !== 1 ? "s" : ""}`} extra={streak >= 3 ? "🔥" : ""} />
+        <StatCard icon={Target} color="text-yellow-400" bg="bg-yellow-400/10" label="Today" value={totalToday > 0 ? `${doneToday}/${totalToday}` : "No tasks"} />
+        {daysLeft !== null ? (
+          <StatCard icon={CalendarDays} color="text-red-400" bg="bg-red-400/10" label="Exam In" value={`${daysLeft} day${daysLeft !== 1 ? "s" : ""}`} />
+        ) : (
+          <div className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-white outline-none focus:border-yellow-400/40"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── Plan Generator ─────────────────────────── */}
+      <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Sparkles size={18} className="text-yellow-400" />
+          <h3 className="text-sm font-bold text-white">Generate AI Study Plan</h3>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-4">
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Subject (e.g. Computer Networks)"
+            className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400/40 sm:col-span-1"
+          />
+          <input
+            value={planDays}
+            onChange={(e) => setPlanDays(e.target.value)}
+            type="number"
+            min="1"
+            max="60"
+            placeholder="Days"
+            className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400/40"
+          />
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400/40"
+          >
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <button
+            onClick={handleGeneratePlan}
+            disabled={generating || !subject.trim()}
+            className="flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-yellow-400 active:scale-95 disabled:opacity-50"
+          >
+            {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {generating ? "Generating…" : "Generate"}
+          </button>
+        </div>
+        {deadline && (
+          <div className="mt-3 flex items-center gap-2">
+            <CalendarDays size={14} className="text-red-400" />
+            <span className="text-xs text-zinc-400">
+              Exam: <span className="font-medium text-red-400">{deadline}</span>
+              {daysLeft !== null && <> · <span className="text-white">{daysLeft} days left</span></>}
+            </span>
+            <button onClick={() => setDeadline("")} className="ml-1 text-xs text-zinc-600 hover:text-red-400">clear</button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Main layout: Calendar + Tasks ──────────── */}
+      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+        {/* Left: Calendar */}
+        <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <button onClick={prevMonth} className="rounded-lg p-1.5 text-zinc-500 hover:bg-gray-800 hover:text-white transition">
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-sm font-semibold text-white">{MONTHS[calMonth]} {calYear}</span>
+            <button onClick={nextMonth} className="rounded-lg p-1.5 text-zinc-500 hover:bg-gray-800 hover:text-white transition">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 mb-1">
+            {WEEKDAYS.map((w) => (
+              <div key={w} className="py-1 text-center text-[10px] font-semibold uppercase tracking-widest text-zinc-600">{w}</div>
+            ))}
+          </div>
+          {/* Day cells */}
+          <div className="grid grid-cols-7 gap-1">
+            {calDays.map((day, i) => {
+              if (!day) return <div key={`e-${i}`} />;
+              const dk = dateKey(day);
+              const isToday = dk === todayKey;
+              const isSelected = dk === selectedDate;
+              const dayTasks = tasks[dk] || [];
+              const hasTasks = dayTasks.length > 0;
+              const allDone = hasTasks && dayTasks.every((t) => t.done);
+              const someDone = hasTasks && dayTasks.some((t) => t.done) && !allDone;
+              return (
+                <button
+                  key={dk}
+                  onClick={() => setSelectedDate(dk)}
+                  className={[
+                    "relative flex flex-col items-center rounded-lg py-1.5 text-xs transition-all duration-150",
+                    isSelected
+                      ? "bg-yellow-400/20 text-yellow-400 font-bold ring-1 ring-yellow-400/40"
+                      : isToday
+                        ? "bg-gray-800 text-white font-semibold"
+                        : "text-zinc-500 hover:bg-gray-800 hover:text-white",
+                  ].join(" ")}
+                >
+                  {day.getDate()}
+                  {hasTasks && (
+                    <span className={`mt-0.5 h-1 w-1 rounded-full ${allDone ? "bg-green-400" : someDone ? "bg-yellow-400" : "bg-zinc-600"}`} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {/* Reminders toggle */}
+          <div className="mt-4 border-t border-gray-800 pt-3">
+            <button
+              onClick={remindersEnabled ? () => setRemindersEnabled(false) : enableReminders}
+              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${
+                remindersEnabled ? "bg-yellow-400/10 text-yellow-400" : "bg-gray-800 text-zinc-500 hover:text-white"
+              }`}
+            >
+              {remindersEnabled ? <Bell size={14} /> : <BellOff size={14} />}
+              {remindersEnabled ? "Reminders on" : "Enable reminders"}
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Tasks for selected date + Pomodoro */}
+        <div className="space-y-4">
+          {/* Tasks header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-white">
+                {selectedDate === todayKey ? "Today" : new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+              </h3>
+              {totalToday > 0 && (
+                <p className="text-xs text-zinc-500 mt-0.5">{doneToday} of {totalToday} completed</p>
+              )}
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          {totalToday > 0 && (
+            <div className="rounded-full bg-gray-800 h-2 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-yellow-400 transition-all duration-500"
+                style={{ width: `${(doneToday / totalToday) * 100}%` }}
+              />
+            </div>
+          )}
+
+          {/* Task list */}
+          {totalToday === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-700 bg-gray-900/40 py-16 text-center">
+              <CalendarDays size={32} className="text-zinc-700 mb-3" />
+              <p className="text-sm text-zinc-500">No tasks for this day</p>
+              <p className="text-xs text-zinc-700 mt-1">Generate a study plan to populate your calendar</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {selectedTasks.map((task, idx) => {
+                const isExpanded = expandedTask === `${selectedDate}-${idx}`;
+                const hasSubs = task.subtasks && task.subtasks.length > 0;
+                return (
+                  <li key={idx} className="rounded-xl border border-gray-800 bg-gray-900/60 overflow-hidden">
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      {/* Checkbox */}
+                      <button onClick={() => toggleTask(selectedDate, idx)} className="shrink-0">
+                        {task.done ? (
+                          <CheckCircle2 size={18} className="text-green-400" />
+                        ) : (
+                          <Circle size={18} className="text-zinc-600 hover:text-yellow-400 transition" />
+                        )}
+                      </button>
+                      {/* Task text */}
+                      <span className={`flex-1 text-sm ${task.done ? "text-zinc-600 line-through" : "text-white"}`}>
+                        {task.text}
+                      </span>
+                      {/* Expand / micro-tasks button */}
+                      <button
+                        onClick={() => expandToMicroTasks(selectedDate, idx)}
+                        disabled={expandingIdx === idx}
+                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-zinc-500 transition hover:bg-gray-800 hover:text-yellow-400"
+                        title="Break into micro-tasks"
+                      >
+                        {expandingIdx === idx ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : hasSubs ? (
+                          <ChevronDown size={12} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                        ) : (
+                          <Zap size={12} />
+                        )}
+                        {hasSubs ? (isExpanded ? "Hide" : `${task.subtasks.length} sub`) : "Break down"}
+                      </button>
+                    </div>
+                    {/* Subtasks */}
+                    {isExpanded && hasSubs && (
+                      <div className="border-t border-gray-800 bg-black/20 px-4 py-2 space-y-1">
+                        {task.subtasks.map((sub, si) => (
+                          <div key={si} className="flex items-center gap-2.5 py-1">
+                            <button onClick={() => toggleSubtask(selectedDate, idx, si)} className="shrink-0">
+                              {sub.done ? (
+                                <CheckCircle2 size={14} className="text-green-400" />
+                              ) : (
+                                <Circle size={14} className="text-zinc-700 hover:text-yellow-400 transition" />
+                              )}
+                            </button>
+                            <span className={`text-xs ${sub.done ? "text-zinc-600 line-through" : "text-zinc-400"}`}>
+                              {sub.text}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {/* Pomodoro Timer */}
+          <PomodoroTimer
+            onSessionComplete={() => {
+              // auto-complete first pending task
+              const pending = selectedTasks.findIndex((t) => !t.done);
+              if (pending !== -1) {
+                toggleTask(selectedDate, pending);
+                toast.success(`"${selectedTasks[pending].text}" marked complete!`, { id: "pomo-done" });
+              }
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Stat Card ──────────────────────────────────── */
+function StatCard({ icon: Icon, color, bg, label, value, extra = "" }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+      <div className={`rounded-lg p-2 ${bg}`}>
+        <Icon size={16} className={color} />
+      </div>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">{label}</p>
+        <p className="text-sm font-bold text-white">{value} {extra}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Pomodoro Timer ─────────────────────────────── */
+function PomodoroTimer({ onSessionComplete }) {
+  const FOCUS = 25 * 60;
+  const BREAK = 5 * 60;
+
+  const [mode, setMode] = useState("focus"); // "focus" | "break"
+  const [time, setTime] = useState(FOCUS);
+  const [running, setRunning] = useState(false);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    if (!running) { clearInterval(intervalRef.current); return; }
+    intervalRef.current = setInterval(() => {
+      setTime((t) => {
+        if (t <= 1) {
+          clearInterval(intervalRef.current);
+          setRunning(false);
+          if (mode === "focus") {
+            toast.success("Focus session complete! Take a break 🎉", { id: "pomo" });
+            onSessionComplete?.();
+            setMode("break");
+            return BREAK;
+          } else {
+            toast.success("Break over! Ready for another session?", { id: "pomo" });
+            setMode("focus");
+            return FOCUS;
+          }
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, [running, mode]);
+
+  const reset = () => { setRunning(false); setTime(mode === "focus" ? FOCUS : BREAK); };
+  const mins = String(Math.floor(time / 60)).padStart(2, "0");
+  const secs = String(time % 60).padStart(2, "0");
+  const pct = mode === "focus" ? ((FOCUS - time) / FOCUS) * 100 : ((BREAK - time) / BREAK) * 100;
+
+  return (
+    <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Clock size={16} className="text-yellow-400" />
+          <h4 className="text-sm font-bold text-white">Pomodoro Timer</h4>
+        </div>
+        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${
+          mode === "focus" ? "bg-yellow-400/10 text-yellow-400" : "bg-green-400/10 text-green-400"
+        }`}>
+          {mode === "focus" ? "Focus" : "Break"}
+        </span>
+      </div>
+
+      {/* Progress ring */}
+      <div className="flex flex-col items-center">
+        <div className="relative h-32 w-32">
+          <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="44" fill="none" stroke="#1f2937" strokeWidth="6" />
+            <circle
+              cx="50" cy="50" r="44" fill="none"
+              stroke={mode === "focus" ? "#facc15" : "#4ade80"}
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 44}`}
+              strokeDashoffset={`${2 * Math.PI * 44 * (1 - pct / 100)}`}
+              className="transition-all duration-1000"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-2xl font-bold tabular-nums text-white">{mins}:{secs}</span>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={() => setRunning(!running)}
+            className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold transition active:scale-95 ${
+              running
+                ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                : "bg-yellow-500 text-black hover:bg-yellow-400"
+            }`}
+          >
+            {running ? <Pause size={14} /> : <Play size={14} />}
+            {running ? "Pause" : "Start"}
+          </button>
+          <button
+            onClick={reset}
+            className="rounded-lg border border-gray-700 p-2 text-zinc-500 transition hover:bg-gray-800 hover:text-white"
+          >
+            <RotateCcw size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

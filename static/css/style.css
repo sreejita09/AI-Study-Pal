@@ -1,0 +1,166 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #eef2f7;
+    color: #2d3a4b;
+}
+
+.navbar {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.card {
+    border: 0;
+    border-radius: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.card-body {
+    padding: 1.4rem;
+}
+
+.card-title {
+    color: #204d75;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+input, select, textarea {
+    border-radius: 8px;
+    border-color: #c5cdd8;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: #004085;
+    box-shadow: 0 0 0 0.2rem rgba(0, 64, 133, 0.25);
+}
+
+button {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+pre {
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.list-group-item {
+    border: 0;
+    padding: 0.75rem 0.25rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+ul {
+    padding-left: 1rem;
+}
+
+h5 {
+    margin-bottom: 1rem;
+}
+
+.output-area {
+    min-height: 200px;
+}
+
+.alert {
+    border: 0;
+    border-radius: 8px;
+    animation: slideDown 0.3s ease-in-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#alertContainer {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.modal-content {
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.nav-tabs .nav-link {
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #004085;
+    background-color: transparent;
+    border-bottom-color: #004085;
+}
+
+@media (max-width: 768px) {
+    .row > .col-xl-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .row > .col-lg-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .row > .col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+}

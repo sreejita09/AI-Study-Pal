@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Pal - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.4.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0f1419;
+            color: #e5e7eb;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            background: #1a1f2e;
+            border-right: 1px solid #2d3748;
+            min-height: 100vh;
+            padding: 0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: #1f2937;
+            font-weight: bold;
+        }
+
+        .logo-text h4 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 1rem 0;
+        }
+
+        .sidebar-menu li {
+            margin: 0;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.75rem 1.5rem;
+            color: #9ca3af;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+            border-left: 3px solid #fbbf24;
+            padding-left: calc(1.5rem - 3px);
+        }
+
+        .sidebar-menu i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid #2d3748;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.75rem;
+            background: rgba(251, 191, 36, 0.05);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+        }
+
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1f2937;
+            font-weight: bold;
+        }
+
+        .user-info h6 {
+            margin: 0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        .user-info p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 0.5rem;
+            background: #dc2626;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #b91c1c;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .search-bar {
+            padding: 0.75rem 1rem;
+            background: #1a1f2e;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            color: #e5e7eb;
+            width: 250px;
+            font-size: 0.9rem;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: #fbbf24;
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+        }
+
+        .tabs-section {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #2d3748;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.25rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #9ca3af;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .tab-btn:hover {
+            color: #e5e7eb;
+        }
+
+        .tab-btn.active {
+            color: #fbbf24;
+            border-bottom-color: #fbbf24;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .upload-section {
+            background: linear-gradient(135deg, #1a1f2e 0%, #252d3d 100%);
+            border: 2px dashed #2d3748;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-section:hover {
+            border-color: #fbbf24;
+            background: linear-gradient(135deg, #1a1f2e 0%, #2d2d1f 100%);
+        }
+
+        .upload-section i {
+            font-size: 3rem;
+            color: #fbbf24;
+            margin-bottom: 1rem;
+        }
+
+        .upload-section h3 {
+            color: #fff;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-section p {
+            color: #9ca3af;
+            margin: 0;
+        }
+
+        .upload-input {
+            display: none;
+        }
+
+        .form-section {
+            background: #1a1f2e;
+            border: 1px solid #2d3748;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            color: #e5e7eb;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: #252d3d;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            color: #e5e7eb;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #fbbf24;
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+        }
+
+        .select-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: #252d3d;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            color: #e5e7eb;
+            font-size: 0.9rem;
+        }
+
+        .select-control option {
+            background: #1a1f2e;
+            color: #e5e7eb;
+        }
+
+        .btn-submit {
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            border: none;
+            color: #1f2937;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(251, 191, 36, 0.2);
+        }
+
+        .output-section {
+            background: #1a1f2e;
+            border: 1px solid #2d3748;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .output-section.show {
+            display: block;
+        }
+
+        .output-title {
+            color: #fbbf24;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .output-content {
+            color: #e5e7eb;
+            line-height: 1.6;
+            background: #252d3d;
+            padding: 1rem;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner.show {
+            display: block;
+        }
+
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        .alert-item {
+            background: #1a1f2e;
+            border-left: 4px solid #fbbf24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            color: #e5e7eb;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .alert-item.success {
+            border-left-color: #10b981;
+        }
+
+        .alert-item.error {
+            border-left-color: #dc2626;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .file-name {
+            color: #fbbf24;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+                z-index: 1000;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .header {
+                gap: 1rem;
+            }
+
+            .search-bar {
+                width: 100%;
+            }
+
+            .tabs-section {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .tab-btn {
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo"><i class="bi bi-book"></i></div>
+            <div class="logo-text">
+                <h4>AI Study Pal</h4>
+            </div>
+        </div>
+
+        <ul class="sidebar-menu">
+            <li><a href="#" class="active" data-tab="dashboard"><i class="bi bi-graph-up"></i> Dashboard</a></li>
+            <li><a href="#" data-tab="my-plans"><i class="bi bi-file-earmark-text"></i> My Plans</a></li>
+            <li><a href="#" data-tab="my-quizzes"><i class="bi bi-question-circle"></i> My Quizzes</a></li>
+            <li><a href="#" data-tab="stats"><i class="bi bi-bar-chart"></i> Analytics</a></li>
+            <li><a href="#" data-tab="settings"><i class="bi bi-gear"></i> Settings</a></li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-avatar" id="userInitial">U</div>
+                <div class="user-info">
+                    <h6 id="userName">User</h6>
+                    <p id="userEmail">user@example.com</p>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div class="alert-container" id="alertContainer"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h1>Dashboard</h1>
+            <input type="text" class="search-bar" placeholder="Search...">
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-section">
+            <button class="tab-btn active" data-tab="dashboard">
+                <i class="bi bi-lightning"></i> Study Tools
+            </button>
+            <button class="tab-btn" data-tab="my-plans">
+                <i class="bi bi-file-earmark"></i> My Plans
+            </button>
+            <button class="tab-btn" data-tab="my-quizzes">
+                <i class="bi bi-question-lg"></i> My Quizzes
+            </button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <!-- File Upload -->
+            <div class="upload-section" onclick="document.getElementById('fileUpload').click()">
+                <i class="bi bi-cloud-arrow-up"></i>
+                <h3>Upload Your Study Material</h3>
+                <p>Drag and drop or click to upload (.txt, .pdf, .csv, .md)</p>
+                <div class="file-name" id="fileName"></div>
+            </div>
+            <input type="file" id="fileUpload" class="upload-input" accept=".txt,.pdf,.csv,.md" onchange="handleFileSelect()">
+
+            <!-- Study Plan -->
+            <div class="form-section">
+                <h5 style="color: #fbbf24; margin-bottom: 1.5rem;">
+                    <i class="bi bi-calendar3"></i> Generate Study Plan
+                </h5>
+                <form id="planForm">
+                    <div class="form-group">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-control" name="subject" placeholder="e.g., Machine Learning" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Study Duration (hours)</label>
+                        <input type="number" class="form-control" name="hours" min="1" max="168" value="5" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Generate Plan</button>
+                </form>
+                <div class="spinner" id="planSpinner">
+                    <div class="spinner-border text-warning" role="status"></div>
+                </div>
+                <div class="output-section" id="planOutput">
+                    <div class="output-title"><i class="bi bi-check-circle"></i> Study Plan Ready</div>
+                    <div class="output-content" id="planContent"></div>
+                </div>
+            </div>
+
+            <!-- Optimized Study Plan (NEW) -->
+            <div class="form-section">
+                <h5 style="color: #fbbf24; margin-bottom: 1.5rem;">
+                    <i class="bi bi-rocket"></i> Generate Optimized Study Plan
+                </h5>
+                <p style="color: #9ca3af; font-size: 0.9rem; margin-bottom: 1rem;">
+                    Upload material and click "Generate" to create an intelligent, personalized study plan optimized for faster learning.
+                </p>
+                <form id="optimizedPlanForm">
+                    <div class="form-group">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-control" name="subject" placeholder="e.g., Python Data Science, Machine Learning Algorithms" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Days Available</label>
+                        <input type="number" class="form-control" name="days" min="1" max="90" value="7" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hours per Day</label>
+                        <input type="number" class="form-control" name="hours_per_day" min="1" max="12" value="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Learning Style</label>
+                        <select class="select-control" name="learning_style">
+                            <option value="balanced">Balanced</option>
+                            <option value="visual">Visual</option>
+                            <option value="kinesthetic">Kinesthetic (Hands-on)</option>
+                            <option value="reading">Reading/Writing</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Topics You're Weak In (optional)</label>
+                        <input type="text" class="form-control" name="weak_topics" placeholder="e.g., Recursion, Databases (comma separated)">
+                    </div>
+                    <button type="submit" class="btn-submit">
+                        <i class="bi bi-lightning-charge"></i> Generate Optimized Plan
+                    </button>
+                </form>
+                <div class="spinner" id="optimizedPlanSpinner">
+                    <div class="spinner-border text-warning" role="status"></div>
+                </div>
+                <div class="output-section" id="optimizedPlanOutput">
+                    <div class="output-title"><i class="bi bi-check-circle"></i> Optimized Study Plan Generated</div>
+                    <div class="output-content" id="optimizedPlanContent"></div>
+                </div>
+            </div>
+
+            <!-- Quiz Generator -->
+            <div class="form-section">
+                <h5 style="color: #fbbf24; margin-bottom: 1.5rem;">
+                    <i class="bi bi-question-circle"></i> Generate Quiz
+                </h5>
+                <form id="quizForm">
+                    <div class="form-group">
+                        <label class="form-label">Paste text or use uploaded file</label>
+                        <textarea class="form-control" name="text" rows="4" placeholder="Paste your study material here..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Difficulty Level</label>
+                        <select class="select-control" name="difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-submit">Generate Quiz</button>
+                </form>
+                <div class="spinner" id="quizSpinner">
+                    <div class="spinner-border text-warning" role="status"></div>
+                </div>
+                <div class="output-section" id="quizOutput">
+                    <div class="output-title"><i class="bi bi-check-circle"></i> Quiz Generated</div>
+                    <div class="output-content" id="quizContent"></div>
+                </div>
+            </div>
+
+            <!-- Summarizer -->
+            <div class="form-section">
+                <h5 style="color: #fbbf24; margin-bottom: 1.5rem;">
+                    <i class="bi bi-file-text"></i> Summarize Text
+                </h5>
+                <form id="summaryForm">
+                    <div class="form-group">
+                        <label class="form-label">Text to summarize</label>
+                        <textarea class="form-control" name="text" rows="4" placeholder="Paste your text here..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit">Summarize</button>
+                </form>
+                <div class="spinner" id="summarySpinner">
+                    <div class="spinner-border text-warning" role="status"></div>
+                </div>
+                <div class="output-section" id="summaryOutput">
+                    <div class="output-title"><i class="bi bi-check-circle"></i> Summary</div>
+                    <div class="output-content" id="summaryContent"></div>
+                </div>
+            </div>
+
+            <!-- Study Tips -->
+            <div class="form-section">
+                <h5 style="color: #fbbf24; margin-bottom: 1.5rem;">
+                    <i class="bi bi-lightbulb"></i> Get Study Tips
+                </h5>
+                <form id="tipsForm">
+                    <div class="form-group">
+                        <label class="form-label">Your subject or text</label>
+                        <textarea class="form-control" name="text" rows="4" placeholder="Paste your material here..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit">Get Tips</button>
+                </form>
+                <div class="spinner" id="tipsSpinner">
+                    <div class="spinner-border text-warning" role="status"></div>
+                </div>
+                <div class="output-section" id="tipsOutput">
+                    <div class="output-title"><i class="bi bi-check-circle"></i> Study Tips</div>
+                    <div class="output-content" id="tipsContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Plans Tab -->
+        <div id="my-plans" class="tab-content">
+            <div class="form-section">
+                <h5 style="color: #fbbf24; margin-bottom: 1.5rem;">Your Study Plans</h5>
+                <div id="plansList" style="color: #9ca3af;">Loading your plans...</div>
+            </div>
+        </div>
+
+        <!-- My Quizzes Tab -->
+        <div id="my-quizzes" class="tab-content">
+            <div class="form-section">
+                <h5 style="color: #fbbf24; margin-bottom: 1.5rem;">Your Quizzes</h5>
+                <div id="quizzesList" style="color: #9ca3af;">Loading your quizzes...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.4.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let uploadedFile = null;
+        const alertContainer = document.getElementById('alertContainer');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            setupTabListeners();
+            setupFormListeners();
+        });
+
+        // Check authentication
+        async function checkAuth() {
+            try {
+                const res = await fetch('/auth/check');
+                const data = await res.json();
+                if (!data.authenticated) {
+                    window.location.href = '/auth/login';
+                } else {
+                    document.getElementById('userName').textContent = data.user.username;
+                    document.getElementById('userInitial').textContent = data.user.username[0].toUpperCase();
+                }
+            } catch (e) {
+                window.location.href = '/auth/login';
+            }
+        }
+
+        // Setup tabs
+        function setupTabListeners() {
+            document.querySelectorAll('[data-tab]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const tabName = btn.dataset.tab;
+                    
+                    // Update active states
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // Show tab content
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    const content = document.getElementById(tabName);
+                    if (content) content.classList.add('active');
+                    
+                    if (tabName === 'my-plans') loadPlans();
+                    if (tabName === 'my-quizzes') loadQuizzes();
+                });
+            });
+        }
+
+        // Setup forms
+        function setupFormListeners() {
+            document.getElementById('planForm').addEventListener('submit', handlePlanSubmit);
+            document.getElementById('optimizedPlanForm').addEventListener('submit', handleOptimizedPlanSubmit);
+            document.getElementById('quizForm').addEventListener('submit', handleQuizSubmit);
+            document.getElementById('summaryForm').addEventListener('submit', handleSummarySubmit);
+            document.getElementById('tipsForm').addEventListener('submit', handleTipsSubmit);
+        }
+
+        // File handling
+        function handleFileSelect() {
+            const file = document.getElementById('fileUpload').files[0];
+            if (file) {
+                uploadedFile = file;
+                document.getElementById('fileName').textContent = `📄 ${file.name}`;
+            }
+        }
+
+        // Show alert
+        function showAlert(message, type = 'success') {
+            const alert = document.createElement('div');
+            alert.className = `alert-item ${type}`;
+            alert.innerHTML = `<i class="bi bi-check-circle"></i> ${message}`;
+            alertContainer.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        // Plan submission
+        async function handlePlanSubmit(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('subject', document.querySelector('#planForm input[name="subject"]').value);
+            formData.append('hours', document.querySelector('#planForm input[name="hours"]').value);
+            if (uploadedFile) formData.append('file', uploadedFile);
+            
+            await submitForm('/generate_plan', formData, 'planSpinner', 'planOutput', 'planContent');
+        }
+
+        // Optimized Plan submission (NEW)
+        async function handleOptimizedPlanSubmit(e) {
+            e.preventDefault();
+            
+            if (!uploadedFile) {
+                showAlert('Please upload study material first', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('subject', document.querySelector('#optimizedPlanForm input[name="subject"]').value);
+            formData.append('days', document.querySelector('#optimizedPlanForm input[name="days"]').value);
+            formData.append('hours_per_day', document.querySelector('#optimizedPlanForm input[name="hours_per_day"]').value);
+            formData.append('learning_style', document.querySelector('#optimizedPlanForm select[name="learning_style"]').value);
+            formData.append('weak_topics', document.querySelector('#optimizedPlanForm input[name="weak_topics"]').value);
+            formData.append('file', uploadedFile);
+            
+            try {
+                document.getElementById('optimizedPlanSpinner').classList.add('show');
+                document.getElementById('optimizedPlanOutput').classList.remove('show');
+                
+                const res = await fetch('/generate_optimized_plan', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    showAlert(data.error || 'Error generating optimized plan', 'error');
+                    document.getElementById('optimizedPlanSpinner').classList.remove('show');
+                    return;
+                }
+                
+                // Format the optimized plan nicely
+                const plan = data.plan;
+                let content = `
+                    <div style="color: #e5e7eb;">
+                        <h6 style="color: #fbbf24; margin-top: 1rem;">Subject: ${plan.subject}</h6>
+                        <p><strong>Type:</strong> ${plan.subject_type}</p>
+                        <p><strong>Total Days:</strong> ${plan.total_days} | <strong>Total Hours:</strong> ${plan.total_hours}</p>
+                        <p><strong>Topics:</strong> ${plan.topics.join(', ')}</p>
+                        <hr style="border-color: #2d3748;">
+                        <h6 style="color: #fbbf24; margin-top: 1.5rem;">Study Schedule:</h6>
+                `;
+                
+                plan.plan.forEach(day => {
+                    content += `
+                        <div style="background: #252d3d; padding: 1rem; margin: 1rem 0; border-radius: 8px; border-left: 4px solid #fbbf24;">
+                            <strong style="color: #fbbf24;">Day ${day.day} (${day.date})</strong>
+                            <p style="margin: 0.5rem 0; color: #9ca3af;"><strong>Topics:</strong> ${day.topics.join(', ')}</p>
+                            <p style="margin: 0.5rem 0; color: #9ca3af;"><strong>Time:</strong> ${day.total_time_minutes} minutes</p>
+                            <div style="margin-top: 0.75rem;">
+                                <strong style="color: #e5e7eb;">Tasks:</strong>
+                                <ul style="margin: 0.5rem 0; padding-left: 1.5rem; color: #e5e7eb;">
+                    `;
+                    day.tasks.forEach(task => {
+                        content += `<li style="margin: 0.25rem 0;">${task}</li>`;
+                    });
+                    content += `
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `</div>`;
+                
+                document.getElementById('optimizedPlanContent').innerHTML = content;
+                
+                document.getElementById('optimizedPlanSpinner').classList.remove('show');
+                document.getElementById('optimizedPlanOutput').classList.add('show');
+                showAlert('✓ Optimized study plan generated!', 'success');
+                
+            } catch (err) {
+                showAlert('Error: ' + err.message, 'error');
+                document.getElementById('optimizedPlanSpinner').classList.remove('show');
+            }
+        }
+
+        // Quiz submission
+        async function handleQuizSubmit(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('text', document.querySelector('#quizForm textarea[name="text"]').value);
+            formData.append('difficulty', document.querySelector('#quizForm select[name="difficulty"]').value);
+            if (uploadedFile) formData.append('file', uploadedFile);
+            
+            await submitForm('/generate_quiz', formData, 'quizSpinner', 'quizOutput', 'quizContent');
+        }
+
+        // Summary submission
+        async function handleSummarySubmit(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('text', document.querySelector('#summaryForm textarea[name="text"]').value);
+            if (uploadedFile) formData.append('file', uploadedFile);
+            
+            await submitForm('/summarize', formData, 'summarySpinner', 'summaryOutput', 'summaryContent');
+        }
+
+        // Tips submission
+        async function handleTipsSubmit(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('text', document.querySelector('#tipsForm textarea[name="text"]').value);
+            if (uploadedFile) formData.append('file', uploadedFile);
+            
+            await submitForm('/generate_tips', formData, 'tipsSpinner', 'tipsOutput', 'tipsContent');
+        }
+
+        // Generic form submission
+        async function submitForm(endpoint, formData, spinnerId, outputId, contentId) {
+            try {
+                document.getElementById(spinnerId).classList.add('show');
+                document.getElementById(outputId).classList.remove('show');
+                
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    showAlert(data.error || 'Error processing request', 'error');
+                    return;
+                }
+                
+                document.getElementById(contentId).textContent = 
+                    data.plan || data.quiz || data.summary || data.tips || JSON.stringify(data, null, 2);
+                
+                document.getElementById(spinnerId).classList.remove('show');
+                document.getElementById(outputId).classList.add('show');
+                showAlert('✓ Done!', 'success');
+                
+            } catch (err) {
+                showAlert('Error: ' + err.message, 'error');
+                document.getElementById(spinnerId).classList.remove('show');
+            }
+        }
+
+        // Load plans
+        async function loadPlans() {
+            try {
+                const res = await fetch('/user/plans');
+                const data = await res.json();
+                const list = document.getElementById('plansList');
+                
+                if (!data.plans || data.plans.length === 0) {
+                    list.innerHTML = '<p style="color: #9ca3af;">No study plans yet. Create one to get started!</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.plans.map(p => `
+                    <div style="background: #252d3d; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
+                        <strong style="color: #fbbf24;">${p.subject}</strong>
+                        <p style="color: #9ca3af; margin-bottom: 0.5rem;">${p.hours} hours | ${new Date(p.created_at).toLocaleDateString()}</p>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('plansList').innerHTML = '<p style="color: #dc2626;">Error loading plans</p>';
+            }
+        }
+
+        // Load quizzes
+        async function loadQuizzes() {
+            try {
+                const res = await fetch('/user/quizzes');
+                const data = await res.json();
+                const list = document.getElementById('quizzesList');
+                
+                if (!data.quizzes || data.quizzes.length === 0) {
+                    list.innerHTML = '<p style="color: #9ca3af;">No quizzes yet. Create one to get started!</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.quizzes.map(q => `
+                    <div style="background: #252d3d; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
+                        <strong style="color: #fbbf24;">${q.subject}</strong>
+                        <p style="color: #9ca3af; margin-bottom: 0.5rem;">Difficulty: ${q.difficulty} | ${new Date(q.created_at).toLocaleDateString()}</p>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('quizzesList').innerHTML = '<p style="color: #dc2626;">Error loading quizzes</p>';
+            }
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                await fetch('/auth/logout', { method: 'POST' });
+                window.location.href = '/auth/login';
+            } catch (e) {
+                console.error('Logout error:', e);
+            }
+        }
+    </script>
+</body>
+</html>
