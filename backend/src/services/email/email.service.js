@@ -64,9 +64,17 @@ async function sendMail({ to, subject, html }) {
     html,
   });
 
-  console.log(`[email] Message sent — id: ${info.messageId}`);
-  console.log(`[email] Accepted:  ${JSON.stringify(info.accepted)}`);
-  console.log(`[email] Rejected:  ${JSON.stringify(info.rejected)}`);
+  // Full debug log — visible in Render logs
+  console.log("EMAIL INFO:", JSON.stringify({
+    messageId: info.messageId,
+    accepted: info.accepted,
+    rejected: info.rejected,
+    response: info.response,
+  }, null, 2));
+
+  if (!info.accepted || info.accepted.length === 0) {
+    throw new Error(`Email not accepted by SMTP server. Rejected: ${JSON.stringify(info.rejected)}`);
+  }
 
   if (info.rejected && info.rejected.length > 0) {
     throw new Error(`Email rejected by SMTP server for: ${info.rejected.join(", ")}`);
