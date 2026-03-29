@@ -1,91 +1,81 @@
 const nodemailer = require("nodemailer");
-const env = require("../../config/env");
 
 // ---------------------------------------------------------------------------
-// Lazy transporter — created on first send, not at module load.
-// This avoids a known Render issue where process.env vars are not yet
-// injected when the module is first required at startup.
+// Stateless email sender — creates a fresh transporter per call.
+//
+// WHY stateless:
+//   A singleton/lazy pattern permanently caches `null` if env vars are missing
+//   on the first call. Stateless = no cache = no stale state, ever.
+//
+// WHY host/port instead of service:"gmail":
+//   The `service:"gmail"` shorthand can silently pick the wrong port or get
+//   blocked by Render's network. Explicit host + STARTTLS is more reliable.
 // ---------------------------------------------------------------------------
-let _transporter = null;
-let _transporterChecked = false;
-
-function getTransporter() {
-  if (_transporterChecked) return _transporter;
-  _transporterChecked = true;
-
-  // env.smtpUser / env.smtpPass are already normalised (whitespace + dots stripped)
-  // by normalizeSecret() in config/env.js — use them instead of process.env directly
-  // so Gmail App Passwords with spaces ("xxxx xxxx xxxx xxxx") are handled correctly.
-  const user = env.smtpUser;   // e.g. "you@gmail.com"
-  const pass = env.smtpPass;   // e.g. "abcdefghijklmnop" (16 chars after normalisation)
-
-  console.log(`[email] SMTP_USER: ${user || "(not set)"}`);
-  console.log(`[email] SMTP_PASS length: ${pass ? pass.length : 0} chars (expected 16 for Gmail App Password)`);
-
-  if (user && pass) {
-    const transport = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user, pass },
-    });
-
-    // Verify connection asynchronously — never blocks startup
-    transport.verify((err) => {
-      if (err) {
-        console.error("[email] SMTP verify failed:", err.message);
-        console.error("[email] Common causes: wrong App Password, 2FA not enabled, 'Less secure apps' blocked.");
-      } else {
-        console.log("[email] SMTP connection verified — Gmail is ready to send.");
-      }
-    });
-
-    _transporter = transport;
-    return _transporter;
-  }
-
-  console.warn(
-    "[email] Email service DISABLED — SMTP_USER or SMTP_PASS not set. " +
-    "Emails will be silently skipped. Set both on Render to enable."
-  );
-  return null;
-}
 
 async function sendMail({ to, subject, html }) {
-  const transport = getTransporter();
+  // ── 1. Read and log raw env values ──────────────────────────────────────
+  const rawUser = process.env.SMTP_USER || "";
+  const rawPass = process.env.SMTP_PASS || "";
 
-  if (!transport) {
-    console.warn(`[email] Skipping send to ${to} — transporter not configured.`);
-    return null;
+  const smtpUser = rawUser.trim();
+  // Strip internal spaces from App Passwords ("abcd efgh ijkl mnop" → "abcdefghijklmnop")
+  const smtpPass = rawPass.trim().replace(/\s+/g, "");
+
+  console.log("[email] SMTP_USER raw length:", rawUser.length, "| value:", smtpUser || "(empty)");
+  console.log("[email] SMTP_PASS raw length:", rawPass.length, "| normalized length:", smtpPass.length, "(expected 16 for Gmail App Password)");
+
+  // ── 2. Fail immediately if credentials are missing ───────────────────────
+  if (!smtpUser || !smtpPass) {
+    throw new Error(
+      `SMTP credentials missing — SMTP_USER set: ${Boolean(smtpUser)}, SMTP_PASS set: ${Boolean(smtpPass)}`
+    );
   }
 
-  const info = await transport.sendMail({
-    from: process.env.MAIL_FROM || `AI Study Pal <${env.smtpUser}>`,
+  // ── 3. Create transporter with explicit host/port (more reliable than service:"gmail") ──
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // STARTTLS — required for port 587
+    auth: { user: smtpUser, pass: smtpPass },
+  });
+
+  // ── 4. Verify credentials synchronously before attempting send ───────────
+  console.log("[email] Verifying SMTP connection with Gmail...");
+  await transporter.verify(); // throws if credentials are wrong or network blocked
+  console.log("[email] SMTP READY — Gmail accepted credentials");
+
+  // ── 5. Send ──────────────────────────────────────────────────────────────
+  console.log(`[email] Sending to: ${to} | subject: ${subject}`);
+  const info = await transporter.sendMail({
+    from: `AI Study Pal <${smtpUser}>`,
     to,
     subject,
     html,
   });
 
-  // Full debug log — visible in Render logs
-  console.log("EMAIL INFO:", JSON.stringify({
+  // ── 6. Log complete SMTP result ───────────────────────────────────────────
+  console.log("EMAIL RESULT:", JSON.stringify({
     messageId: info.messageId,
-    accepted: info.accepted,
-    rejected: info.rejected,
-    response: info.response,
+    accepted:  info.accepted,
+    rejected:  info.rejected,
+    response:  info.response,
+    envelope:  info.envelope,
   }, null, 2));
 
+  // ── 7. Throw if not actually accepted ────────────────────────────────────
   if (!info.accepted || info.accepted.length === 0) {
-    throw new Error(`Email not accepted by SMTP server. Rejected: ${JSON.stringify(info.rejected)}`);
+    throw new Error(
+      `Email not accepted by Gmail. rejected=${JSON.stringify(info.rejected)} response=${info.response}`
+    );
   }
-
   if (info.rejected && info.rejected.length > 0) {
-    throw new Error(`Email rejected by SMTP server for: ${info.rejected.join(", ")}`);
+    throw new Error(`Email partially rejected for: ${info.rejected.join(", ")}`);
   }
 
   return info;
 }
 
 async function sendVerificationEmail({ email, username, verificationUrl }) {
-  // This throws on failure so the caller (register) can decide what to do.
-  // The register controller catches it as non-fatal — but at least we log clearly.
   await sendMail({
     to: email,
     subject: "Verify your AI Study Pal account",
@@ -103,8 +93,5 @@ async function sendVerificationEmail({ email, username, verificationUrl }) {
   });
 }
 
-module.exports = {
-  sendVerificationEmail,
-  sendMail,
-  get transporter() { return getTransporter(); },
-};
+module.exports = { sendVerificationEmail, sendMail };
+

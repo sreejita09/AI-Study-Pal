@@ -65,18 +65,24 @@ const register = asyncHandler(async (req, res) => {
     console.error("[register] syncLearningProfile failed (non-fatal):", syncError.message);
   }
 
-  // Send verification email — truly non-fatal: a failure here must NOT block registration.
-  // The user account is already saved; they can request a resend from the login page.
+  // Send verification email — FATAL: if email fails, roll back the user so
+  // they can register again cleanly once SMTP is fixed. Never lie about "email sent".
   const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
   try {
     await sendVerificationEmail({ email: normalizedEmail, username, verificationUrl });
   } catch (emailError) {
-    console.error("[register] Verification email failed (non-fatal):", emailError.message);
+    console.error("[register] Email send FAILED — rolling back user creation:", emailError.message);
+    // Clean up so the user isn't stuck with an unverifiable account
+    await LearningProfile.deleteOne({ user: user._id });
+    await User.deleteOne({ _id: user._id });
+    return res.status(500).json({
+      message: "Registration failed: could not send verification email. Please try again or contact support.",
+    });
   }
 
   res.status(201).json({
     success: true,
-    message: "Account created. Please verify your email before logging in."
+    message: "Account created. Check your email to verify your account."
   });
 });
 
