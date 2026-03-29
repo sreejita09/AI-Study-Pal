@@ -65,9 +65,14 @@ const register = asyncHandler(async (req, res) => {
     console.error("[register] syncLearningProfile failed (non-fatal):", syncError.message);
   }
 
-  // Send verification email — non-fatal: sendVerificationEmail catches internally
+  // Send verification email — truly non-fatal: a failure here must NOT block registration.
+  // The user account is already saved; they can request a resend from the login page.
   const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
-  await sendVerificationEmail({ email: normalizedEmail, username, verificationUrl });
+  try {
+    await sendVerificationEmail({ email: normalizedEmail, username, verificationUrl });
+  } catch (emailError) {
+    console.error("[register] Verification email failed (non-fatal):", emailError.message);
+  }
 
   res.status(201).json({
     success: true,

@@ -10,7 +10,9 @@ if (!import.meta.env.VITE_API_URL) {
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true,
-  timeout: 10000,
+  // 35s — Render free tier cold start can take up to 30s.
+  // The frontend shows a spinner during this wait so UX is acceptable.
+  timeout: 35000,
 });
 
 // Attach auth token to every request
