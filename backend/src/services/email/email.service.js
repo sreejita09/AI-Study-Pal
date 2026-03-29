@@ -35,17 +35,19 @@ async function sendMail({ to, subject, html }) {
     return null;
   }
 
-  // Verify SMTP connection first
+  // Verify SMTP connection (with 8s timeout so it doesn't hang forever)
   console.log("[email] Verifying SMTP connection...");
   try {
-    await transporter.verify();
+    await Promise.race([
+      transporter.verify(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("SMTP verify timed out after 8s — check SMTP_USER is a Gmail address and SMTP_PASS is correct")), 8000))
+    ]);
     console.log("[email] SMTP CONNECTION OK");
   } catch (verifyErr) {
     console.error("[email] SMTP verify FAILED:", verifyErr.message);
-    if (verifyErr.responseCode === 535 || verifyErr.message.includes("Invalid login")) {
-      console.error("[email] HINT: SMTP_USER must be the Gmail address that owns the App Password.");
-      console.error("[email] HINT: SMTP_PASS must be a 16-letter Gmail App Password. Generate at https://myaccount.google.com/apppasswords");
-    }
+    console.error("[email] SMTP_USER value:", (process.env.SMTP_USER || "").trim());
+    console.error("[email] HINT: SMTP_USER must be the Gmail address (e.g. you@gmail.com) that owns the App Password.");
+    console.error("[email] HINT: SMTP_PASS must be a 16-letter Gmail App Password.");
     throw verifyErr;
   }
 
