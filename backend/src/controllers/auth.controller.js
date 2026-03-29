@@ -9,6 +9,8 @@ const { sendVerificationEmail } = require("../services/email/email.service");
 const { syncLearningProfile } = require("../services/learningEngine");
 
 const EMAIL_SEND_TIMEOUT_MS = 8000;
+const DB_OP_TIMEOUT_MS = 6000;
+const SYNC_TIMEOUT_MS = 7000;
 
 function withTimeout(promise, ms, label) {
   return Promise.race([
@@ -17,6 +19,19 @@ function withTimeout(promise, ms, label) {
       setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
     })
   ]);
+}
+
+function runInBackground(label, task, requestId) {
+  setImmediate(async () => {
+    const startedAt = Date.now();
+    console.log(`[register][${requestId}] BG START: ${label}`);
+    try {
+      await task();
+      console.log(`[register][${requestId}] BG DONE: ${label} (${Date.now() - startedAt}ms)`);
+    } catch (error) {
+      console.error(`[register][${requestId}] BG FAIL: ${label} ->`, error.message);
+    }
+  });
 }
 
 function setAuthCookie(res, token) {
@@ -31,73 +46,93 @@ function setAuthCookie(res, token) {
 }
 
 const register = asyncHandler(async (req, res) => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const startedAt = Date.now();
   const { username, email, password } = req.validatedBody;
-
   const normalizedEmail = email.toLowerCase();
 
-  const existingUser = await User.findOne({
-    $or: [{ username }, { email: normalizedEmail }]
+  console.log(`[register][${requestId}] STEP 1: request received for ${normalizedEmail}`);
+  res.on("finish", () => {
+    console.log(`[register][${requestId}] RESPONSE ${res.statusCode} in ${Date.now() - startedAt}ms`);
   });
+
+  console.log(`[register][${requestId}] STEP 2: checking existing user`);
+  const existingUser = await withTimeout(
+    User.findOne({ $or: [{ username }, { email: normalizedEmail }] }),
+    DB_OP_TIMEOUT_MS,
+    "User.findOne"
+  );
+  console.log(`[register][${requestId}] STEP 2 DONE: existingUser=${Boolean(existingUser)}`);
 
   if (existingUser) {
     if (existingUser.isEmailVerified) {
-      return res.status(409).json({
-        message: "Username or email already exists"
-      });
+      console.log(`[register][${requestId}] STEP 2 EXIT: verified account already exists`);
+      return res.status(409).json({ message: "Username or email already exists" });
     }
 
-    await LearningProfile.deleteOne({ user: existingUser._id });
-    await User.deleteOne({ _id: existingUser._id });
+    console.log(`[register][${requestId}] STEP 3: deleting stale unverified account ${existingUser._id}`);
+    await withTimeout(LearningProfile.deleteOne({ user: existingUser._id }), DB_OP_TIMEOUT_MS, "LearningProfile.deleteOne");
+    await withTimeout(User.deleteOne({ _id: existingUser._id }), DB_OP_TIMEOUT_MS, "User.deleteOne");
+    console.log(`[register][${requestId}] STEP 3 DONE: stale account removed`);
   }
 
+  console.log(`[register][${requestId}] STEP 4: hashing password`);
   const passwordHash = await bcrypt.hash(password, 12);
+  console.log(`[register][${requestId}] STEP 4 DONE`);
+
+  console.log(`[register][${requestId}] STEP 5: creating verification token`);
   const tokenBundle = createEmailVerificationToken();
 
-  const user = await User.create({
-    username,
-    email: normalizedEmail,
-    passwordHash,
-    emailVerificationToken: tokenBundle.hashedToken,
-    emailVerificationExpiresAt: tokenBundle.expiresAt
-  });
+  console.log(`[register][${requestId}] STEP 6: creating user in MongoDB`);
+  const user = await withTimeout(
+    User.create({
+      username,
+      email: normalizedEmail,
+      passwordHash,
+      emailVerificationToken: tokenBundle.hashedToken,
+      emailVerificationExpiresAt: tokenBundle.expiresAt
+    }),
+    DB_OP_TIMEOUT_MS,
+    "User.create"
+  );
+  console.log(`[register][${requestId}] STEP 6 DONE: user created ${user._id}`);
 
-  // Create the learning profile — if this fails, roll back the user (DB is unavailable)
-  try {
-    await LearningProfile.create({ user: user._id });
-  } catch (lpError) {
-    await User.deleteOne({ _id: user._id });
-    throw lpError;
-  }
-
-  // Sync the learning profile — non-fatal: a failure here does not undo registration
-  try {
-    await syncLearningProfile(user);
-  } catch (syncError) {
-    console.error("[register] syncLearningProfile failed (non-fatal):", syncError.message);
-  }
-
-  // Send verification email — non-fatal.
-  // Account creation should not be blocked by SMTP/network latency.
-  const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
-  let verificationEmailSent = true;
-  try {
-    await withTimeout(
-      sendVerificationEmail({ email: normalizedEmail, username, verificationUrl }),
-      EMAIL_SEND_TIMEOUT_MS,
-      "sendVerificationEmail"
-    );
-  } catch (emailError) {
-    verificationEmailSent = false;
-    console.error("[register] Verification email failed (non-fatal):", emailError.message);
-  }
-
+  // Critical path ends here. Respond immediately.
+  console.log(`[register][${requestId}] STEP 7: sending immediate 201 response`);
   res.status(201).json({
     success: true,
-    verificationEmailSent,
-    message: verificationEmailSent
-      ? "Account created. Check your email to verify your account."
-      : "Account created, but verification email could not be sent right now. Please use resend verification."
+    verificationEmailSent: true,
+    message: "Account created. Verification email is being processed.",
+    requestId,
   });
+
+  // Non-blocking background tasks: never hold registration response.
+  runInBackground(
+    "LearningProfile.create",
+    async () => {
+      try {
+        await withTimeout(LearningProfile.create({ user: user._id }), DB_OP_TIMEOUT_MS, "LearningProfile.create");
+      } catch (error) {
+        // Ignore duplicate profile key errors (already created by another process)
+        if (error && error.code === 11000) return;
+        throw error;
+      }
+    },
+    requestId
+  );
+
+  runInBackground(
+    "syncLearningProfile",
+    () => withTimeout(syncLearningProfile(user), SYNC_TIMEOUT_MS, "syncLearningProfile"),
+    requestId
+  );
+
+  const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
+  runInBackground(
+    "sendVerificationEmail",
+    () => withTimeout(sendVerificationEmail({ email: normalizedEmail, username, verificationUrl }), EMAIL_SEND_TIMEOUT_MS, "sendVerificationEmail"),
+    requestId
+  );
 });
 
 const verifyEmail = asyncHandler(async (req, res) => {
