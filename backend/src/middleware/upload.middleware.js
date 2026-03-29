@@ -15,11 +15,23 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB to handle presentations
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ["application/pdf", "text/plain"];
-    if (!allowedTypes.includes(file.mimetype)) {
-      cb(new Error("Only PDF and text files are allowed"));
+    const allowedTypes = [
+      "application/pdf",
+      "text/plain",
+      // Word
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      // PowerPoint
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ];
+    // Also allow by extension in case browser sends generic MIME
+    const ext = file.originalname.split(".").pop()?.toLowerCase();
+    const allowedExts = ["pdf", "txt", "doc", "docx", "ppt", "pptx"];
+    if (!allowedTypes.includes(file.mimetype) && !allowedExts.includes(ext)) {
+      cb(new Error("Only PDF, Word (.doc/.docx), PowerPoint (.ppt/.pptx), and text files are allowed"));
       return;
     }
     cb(null, true);

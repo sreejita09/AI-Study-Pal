@@ -146,7 +146,7 @@ export default function Workspace({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.txt"
+            accept=".pdf,.txt,.doc,.docx,.ppt,.pptx"
             onChange={handleFileInput}
             className="hidden"
           />

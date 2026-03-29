@@ -373,30 +373,8 @@ export default function DashboardPage() {
       console.log("[upload] Response:", { success: data.success, fallback: data.fallback, textLen: (data.extractedText || "").length });
 
       const text = data.extractedText || data.upload?.extractedText || data.text || "";
-      const fallback = data.fallback === true;
 
-      if (fallback || text.trim().length < 20) {
-        toast(
-          (t) => (
-            <span>
-              Limited text extracted from{" "}
-              <strong>{file.name}</strong>.{" "}
-              <button
-                className="ml-1 underline text-[var(--accent)]"
-                onClick={() => {
-                  toast.dismiss(t.id);
-                  document.getElementById("paste-text-area")?.focus();
-                }}
-              >
-                Paste text instead?
-              </button>
-            </span>
-          ),
-          { id: "no-text", duration: 5000 }
-        );
-      }
-
-      const newFile = { name: file.name, type: file.type, text: text || "(No text extracted — paste your content below)" };
+      const newFile = { name: file.name, type: file.type, text: text || "" };
       const updatedFiles = [...files, newFile];
       setFiles(updatedFiles);
       setResults({});

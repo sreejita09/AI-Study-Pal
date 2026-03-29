@@ -54,7 +54,7 @@ const AIFileStudio = () => {
         <h2 className="font-bold mb-4 text-lg">Uploaded Files</h2>
         <input
           type="file"
-          accept=".pdf,.txt"
+          accept=".pdf,.txt,.doc,.docx,.ppt,.pptx"
           ref={fileInput}
           onChange={handleUpload}
           className="mb-4 block"

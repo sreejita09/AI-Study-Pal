@@ -41,7 +41,7 @@ export default function UploadBar({
       <div className="flex flex-col gap-4">
         {/* Upload Section */}
         <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-surface)] p-4">
-          <input ref={fileRef} type="file" accept=".pdf,.txt" onChange={handleFile} className="hidden" />
+          <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx,.ppt,.pptx" onChange={handleFile} className="hidden" />
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}

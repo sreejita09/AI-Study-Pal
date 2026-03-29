@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const pdfParse = require("pdf-parse");
+const mammoth = require("mammoth");
+const officeParser = require("officeparser");
 const Upload = require("../models/Upload");
 const asyncHandler = require("../utils/asyncHandler");
 
@@ -20,11 +22,24 @@ const uploadFile = asyncHandler(async (req, res) => {
 
   try {
     const mime = req.file.mimetype;
+    const ext = req.file.originalname.split(".").pop()?.toLowerCase();
 
-    if (mime === "application/pdf") {
+    if (mime === "application/pdf" || ext === "pdf") {
       const dataBuffer = fs.readFileSync(filePath);
       const result = await pdfParse(dataBuffer);
       extractedText = (result.text || "").replace(/\s{3,}/g, "\n").trim();
+    } else if (
+      mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      mime === "application/msword" || ext === "docx" || ext === "doc"
+    ) {
+      const result = await mammoth.extractRawText({ path: filePath });
+      extractedText = (result.value || "").trim();
+    } else if (
+      mime === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+      mime === "application/vnd.ms-powerpoint" || ext === "pptx" || ext === "ppt"
+    ) {
+      extractedText = await officeParser.parseOfficeAsync(filePath);
+      extractedText = (extractedText || "").trim();
     } else {
       // text/plain, text/csv, etc.
       extractedText = fs.readFileSync(filePath, "utf-8").trim();
@@ -47,7 +62,13 @@ const uploadFile = asyncHandler(async (req, res) => {
     mimeType: req.file.mimetype,
     path: req.file.path,
     size: req.file.size,
-    category: req.file.mimetype === "application/pdf" ? "pdf" : "text",
+    category: (() => {
+      const ext = req.file.originalname.split(".").pop()?.toLowerCase();
+      if (ext === "pdf") return "pdf";
+      if (ext === "ppt" || ext === "pptx") return "ppt";
+      if (ext === "doc" || ext === "docx") return "doc";
+      return "text";
+    })(),
   });
 
   res.status(201).json({
