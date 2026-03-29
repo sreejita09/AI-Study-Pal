@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   Plus, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronDown,
   LogOut, AlignLeft, StickyNote, HelpCircle, Search, X, Trash2, Pencil, Check,
-  File, FileType, Presentation, Clock, Layers, Sun, Moon, Palette, RefreshCw
+  File, FileType, Presentation, Clock, Layers, Sun, Moon, Palette, RefreshCw, LifeBuoy
 } from "lucide-react";
 import { useTheme, ACCENT_COLORS } from "../../context/ThemeContext";
 
@@ -134,6 +134,9 @@ export default function DashboardSidebar({
         <div className="mt-auto flex flex-col items-center gap-2">
           <button onClick={toggleTheme} className="rounded-lg p-2 text-[var(--text-muted)] transition hover:text-[var(--text-primary)]">
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+          <button onClick={() => window.location.href = '/help'} className="rounded-lg p-2 text-[var(--text-muted)] transition hover:text-[var(--text-primary)]" title="Help & Support">
+            <LifeBuoy size={16} />
           </button>
           <button onClick={onLogout} className="rounded-lg p-2 text-[var(--text-muted)] transition hover:text-red-400">
             <LogOut size={18} />
@@ -577,6 +580,13 @@ export default function DashboardSidebar({
           </div>
         )}
 
+        <button
+          onClick={() => window.location.href = '/help'}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-[var(--text-muted)] transition hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
+        >
+          <LifeBuoy size={16} />
+          Help &amp; Support
+        </button>
         <button
           onClick={() => window.location.href = '/profile'}
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-[var(--text-muted)] transition hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"

@@ -15,6 +15,7 @@ const progressRoutes = require("./routes/progress.routes");
 const testEmailRoutes = require("./routes/test-email.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const historyRoutes = require("./routes/history.routes");
+const supportRoutes = require("./routes/support.routes");
 const { apiLimiter } = require("./middleware/rateLimit.middleware");
 const { notFound, errorHandler } = require("./middleware/error.middleware");
 
@@ -71,6 +72,7 @@ app.use("/api/study", studyRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/history", historyRoutes);
+app.use("/api/support", supportRoutes);
 app.use("/api", testEmailRoutes);
 
 app.use(notFound);

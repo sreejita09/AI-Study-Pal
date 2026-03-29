@@ -17,7 +17,17 @@ const apiLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// 5 support submissions per IP per hour
+const supportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many support requests. Please wait before submitting again." }
+});
+
 module.exports = {
   authLimiter,
-  apiLimiter
+  apiLimiter,
+  supportLimiter,
 };
