@@ -26,7 +26,7 @@ build/
 *.so
 *.pkl
 *.h5
-models/
+/models/
 data/*.csv
 node_modules/
 frontend/node_modules/
