@@ -1,0 +1,10 @@
+# Local env files — never commit real credentials
+.env.local
+.env.*.local
+
+# Vite build output
+dist/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
