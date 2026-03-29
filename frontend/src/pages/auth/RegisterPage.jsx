@@ -5,7 +5,6 @@ import api from "../../lib/api";
 import { useAuth } from "../../hooks/useAuth";
 import PasswordField from "../../components/common/PasswordField";
 import PasswordStrengthMeter from "../../components/common/PasswordStrengthMeter";
-import brainLogo from "../../assets/brain-logo.svg";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -26,14 +25,23 @@ export default function RegisterPage() {
 
   const onSubmit = async (event) => {
     event.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
 
+    const controller = new AbortController();
     try {
-      await api.post("/auth/register", form);
+      await api.post("/auth/register", form, {
+        signal: controller.signal,
+        timeout: 45000
+      });
       toast.success("Account created. Check your email to verify.");
       navigate("/login");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Registration failed");
+      if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+        toast.error("Server is waking up. Please wait a moment and try again.");
+      } else {
+        toast.error(error.response?.data?.message || "Registration failed");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -121,10 +129,7 @@ export default function RegisterPage() {
       <div className="hidden p-8 lg:block">
         <div className="flex h-full flex-col justify-between rounded-[32px] border border-white/10 bg-[#0f0f0f]/90 p-10">
           <div>
-            <div className="mb-4 flex items-center gap-3">
-              <img src={brainLogo} alt="AI Study Pal" className="h-8 w-8 object-contain" />
-              <p className="text-xs uppercase tracking-[0.35em] text-highlight">Why AI Study Pal?</p>
-            </div>
+            <p className="mb-4 text-xs uppercase tracking-[0.35em] text-highlight">Why AI Study Pal?</p>
             <h2 className="max-w-lg font-display text-5xl text-white leading-tight">
               Master any subject smarter, faster, and with confidence.
             </h2>

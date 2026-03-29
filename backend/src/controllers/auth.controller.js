@@ -19,62 +19,84 @@ function setAuthCookie(res, token) {
 
 const register = asyncHandler(async (req, res) => {
   const { username, email, password } = req.validatedBody;
-
   const normalizedEmail = email.toLowerCase();
 
-  const existingUser = await User.findOne({
+  // ── 1. Check ALL users matching username OR email ──
+  const existingUsers = await User.find({
     $or: [{ username }, { email: normalizedEmail }]
   });
 
-  if (existingUser) {
-    if (existingUser.isEmailVerified) {
-      return res.status(409).json({
-        message: "Username or email already exists"
-      });
-    }
-
-    await LearningProfile.deleteOne({ user: existingUser._id });
-    await User.deleteOne({ _id: existingUser._id });
+  // Block if any verified user holds this username or email
+  const verified = existingUsers.find((u) => u.isEmailVerified);
+  if (verified) {
+    return res.status(409).json({
+      message: "Username or email already exists"
+    });
   }
 
+  // ── 2. Remove ALL stale unverified duplicates (atomic, parallel) ──
+  if (existingUsers.length > 0) {
+    const ids = existingUsers.map((u) => u._id);
+    await Promise.all([
+      User.deleteMany({ _id: { $in: ids } }),
+      LearningProfile.deleteMany({ user: { $in: ids } })
+    ]);
+  }
+
+  // ── 3. Create user (catch duplicate-key race) ──
   const passwordHash = await bcrypt.hash(password, 12);
   const tokenBundle = createEmailVerificationToken();
 
-  const user = await User.create({
-    username,
-    email: normalizedEmail,
-    passwordHash,
-    emailVerificationToken: tokenBundle.hashedToken,
-    emailVerificationExpiresAt: tokenBundle.expiresAt
-  });
+  let user;
+  try {
+    user = await User.create({
+      username,
+      email: normalizedEmail,
+      passwordHash,
+      emailVerificationToken: tokenBundle.hashedToken,
+      emailVerificationExpiresAt: tokenBundle.expiresAt
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        message: "Username or email already exists. Please try again."
+      });
+    }
+    throw err;
+  }
 
-  // ── RESPOND IMMEDIATELY ──
+  // ── 4. Respond IMMEDIATELY (nothing awaited after this) ──
   res.status(201).json({
     message: "Account created. Please verify your email before logging in."
   });
 
-  // ── EVERYTHING BELOW RUNS AFTER RESPONSE IS SENT ──
+  // ── 5. Background tasks (fire-and-forget) ──
   setImmediate(async () => {
     try {
-      await LearningProfile.create({ user: user._id });
-      console.log(`[register] LearningProfile created for ${user._id}`);
+      await LearningProfile.findOneAndUpdate(
+        { user: user._id },
+        { user: user._id },
+        { upsert: true, new: true }
+      );
     } catch (err) {
-      console.error(`[register] LearningProfile create failed:`, err.message);
+      console.error("[register] LearningProfile:", err.message);
     }
 
     try {
       await syncLearningProfile(user);
-      console.log(`[register] syncLearningProfile done for ${user._id}`);
     } catch (err) {
-      console.error(`[register] syncLearningProfile failed:`, err.message);
+      console.error("[register] sync:", err.message);
     }
 
     const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
     try {
-      await sendVerificationEmail({ email: normalizedEmail, username, verificationUrl });
-      console.log(`[register] Verification email sent to ${normalizedEmail}`);
+      await sendVerificationEmail({
+        email: normalizedEmail,
+        username,
+        verificationUrl
+      });
     } catch (err) {
-      console.error(`[register] Email send failed:`, err.message);
+      console.error("[register] email:", err.message);
     }
   });
 });
