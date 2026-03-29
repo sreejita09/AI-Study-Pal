@@ -20,7 +20,7 @@ function getTransporter() {
       },
     });
 
-    gmailTransporter.verify((error, success) => {
+    gmailTransporter.verify((error) => {
       if (error) {
         console.error("SMTP CONFIG ERROR (Gmail):", error);
       } else {
@@ -47,7 +47,7 @@ function getTransporter() {
       },
     });
 
-    mailtrapTransporter.verify((error, success) => {
+    mailtrapTransporter.verify((error) => {
       if (error) {
         console.error("SMTP CONFIG ERROR (Mailtrap):", error);
       } else {
@@ -58,12 +58,21 @@ function getTransporter() {
     return mailtrapTransporter;
   }
 
-  throw new Error("No valid SMTP configuration found.");
+  // No SMTP config — disable email rather than crash
+  console.warn(
+    "⚠️  Email service disabled: missing SMTP config. " +
+    "Set SMTP_USER + SMTP_PASS (Gmail) or MAILTRAP_* env vars to enable."
+  );
+  return null;
 }
 
 const transporter = getTransporter();
 
 async function sendMail({ to, subject, html }) {
+  if (!transporter) {
+    console.warn(`Email not sent to ${to} — email service is disabled (no SMTP config).`);
+    return;
+  }
   try {
     await transporter.sendMail({
       from: process.env.MAIL_FROM || process.env.SMTP_USER,
@@ -94,8 +103,8 @@ async function sendVerificationEmail({ email, username, verificationUrl }) {
       `
     });
   } catch (err) {
-    console.error("FULL EMAIL ERROR:", err);
-    throw err;
+    console.error("sendVerificationEmail error:", err);
+    // Do not rethrow — email failure should not block registration
   }
 }
 
