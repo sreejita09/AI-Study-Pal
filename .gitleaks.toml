@@ -1,0 +1,10 @@
+[extend]
+# Extend the default gitleaks config
+useDefault = true
+
+[allowlist]
+description = "Safe files that contain placeholder values only"
+paths = [
+    '''\.env\.example$''',
+    '''\.env\.example\..*$''',
+]
