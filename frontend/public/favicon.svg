@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!--
+    Favicon-optimised version: same concept, pixel-grid-aligned coords,
+    thicker proportions so it reads at 16px–32px.
+  -->
+  <rect width="32" height="32" rx="6" fill="#0b0b0f"/>
+  <g fill="#facc15">
+    <!-- Diamond spark -->
+    <polygon points="16,5 19,9 16,13 13,9"/>
+    <!-- Connector -->
+    <rect x="15" y="13" width="2" height="2" rx="1"/>
+    <!-- Left page -->
+    <path d="M 15 15 C 12 15 6 17.5 6 20.5 C 6 23.5 12 26 15 26 Z"/>
+    <!-- Right page -->
+    <path d="M 17 15 C 20 15 26 17.5 26 20.5 C 26 23.5 20 26 17 26 Z"/>
+  </g>
+</svg>
