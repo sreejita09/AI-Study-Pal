@@ -11,7 +11,7 @@ async function connectDb() {
   }
 
   if (uri.includes("127.0.0.1") || uri.includes("localhost")) {
-    console.warn("[db] Warning: using localhost MongoDB — this will fail on Render.");
+    throw new Error("MONGO_URI points to localhost — use a MongoDB Atlas URI (mongodb+srv://...)");
   }
 
   mongoose.set("strictQuery", true);

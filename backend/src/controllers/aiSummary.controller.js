@@ -1,10 +1,14 @@
 const OpenAI = require("openai");
 
-console.log("OPENAI_API_KEY loaded:", process.env.OPENAI_API_KEY ? "YES (" + process.env.OPENAI_API_KEY.slice(0, 12) + "...)" : "NO - MISSING");
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy-initialized so the client is created only when first used,
+// after dotenv has loaded env vars.
+let _client = null;
+function getClient() {
+  if (!_client) {
+    _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _client;
+}
 
 const PROMPTS = {
   summary: (text) => `Summarize the following content into a clean, structured study format:
@@ -237,7 +241,7 @@ const generate = async (req, res) => {
       promptContent = PROMPTS[mode](text.slice(0, 12000));
     }
 
-    const response = await client.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -285,7 +289,7 @@ const generate = async (req, res) => {
         if (hasPlaceholders) {
           console.warn("Quiz had placeholder options, regenerating...");
           // Retry once
-          const retry = await client.chat.completions.create({
+          const retry = await getClient().chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
               { role: "user", content: PROMPTS.quiz(text.slice(0, 12000)) },
