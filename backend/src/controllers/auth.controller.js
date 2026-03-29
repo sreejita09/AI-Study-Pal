@@ -12,7 +12,9 @@ function setAuthCookie(res, token) {
   res.cookie(env.cookieName, token, {
     httpOnly: true,
     secure: env.isProduction,
-    sameSite: "lax",
+    // "none" is required for cross-origin requests with credentials (Vercel → Render).
+    // "lax" blocks cross-origin XHR/Fetch, causing auth cookies to never be sent.
+    sameSite: env.isProduction ? "none" : "lax",
     maxAge: 1000 * 60 * 60 * 24 * 7
   });
 }
@@ -48,23 +50,27 @@ const register = asyncHandler(async (req, res) => {
     emailVerificationExpiresAt: tokenBundle.expiresAt
   });
 
+  // Create the learning profile — if this fails, roll back the user (DB is unavailable)
   try {
     await LearningProfile.create({ user: user._id });
-    await syncLearningProfile(user);
-
-    const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
-    await sendVerificationEmail({
-      email: normalizedEmail,
-      username,
-      verificationUrl
-    });
-  } catch (error) {
-    await LearningProfile.deleteOne({ user: user._id });
+  } catch (lpError) {
     await User.deleteOne({ _id: user._id });
-    throw error;
+    throw lpError;
   }
 
+  // Sync the learning profile — non-fatal: a failure here does not undo registration
+  try {
+    await syncLearningProfile(user);
+  } catch (syncError) {
+    console.error("[register] syncLearningProfile failed (non-fatal):", syncError.message);
+  }
+
+  // Send verification email — non-fatal: sendVerificationEmail catches internally
+  const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
+  await sendVerificationEmail({ email: normalizedEmail, username, verificationUrl });
+
   res.status(201).json({
+    success: true,
     message: "Account created. Please verify your email before logging in."
   });
 });
