@@ -1,50 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" width="512" height="512">
+  <path d="M 50 12 C 45 12 38 13 33 17 C 26 22 23 29 24 36 C 22 37 19 39 19 43 C 19 47 22 50 25 51 C 23 54 23 58 26 61 C 29 64 34 65 38 63 C 40 67 44 69 48 69 L 50 69 L 50 12 Z" fill="#f5a623" stroke="#141414" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M 50 12 C 45 12 38 13 33 17 C 26 22 23 29 24 36 C 22 37 19 39 19 43 C 19 47 22 50 25 51 C 23 54 23 58 26 61 C 29 64 34 65 38 63 C 40 67 44 69 48 69 L 50 69 L 50 12 Z" fill="none" stroke="#fef3c7" stroke-width="1.2" stroke-linejoin="round" opacity="0.72"/>
 
-  <!-- App icon background with rounded corners -->
-  <rect width="512" height="512" rx="88" fill="#0b0b0f"/>
+  <path d="M 50 12 C 55 12 62 13 67 17 C 74 22 77 29 76 36 C 78 37 81 39 81 43 C 81 47 78 50 75 51 C 77 54 77 58 74 61 C 71 64 66 65 62 63 C 60 67 56 69 52 69 L 50 69 L 50 12 Z" fill="#f5a623" stroke="#141414" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M 50 12 C 55 12 62 13 67 17 C 74 22 77 29 76 36 C 78 37 81 39 81 43 C 81 47 78 50 75 51 C 77 54 77 58 74 61 C 71 64 66 65 62 63 C 60 67 56 69 52 69 L 50 69 L 50 12 Z" fill="none" stroke="#fef3c7" stroke-width="1.2" stroke-linejoin="round" opacity="0.72"/>
 
-  <!-- Icon: AI spark diamond + open book -->
-  <g fill="#facc15" filter="url(#glow)">
+  <line x1="50" y1="12" x2="50" y2="69" stroke="#141414" stroke-width="2"/>
 
-    <!-- Diamond / AI spark above the book -->
-    <polygon points="256,122 280,150 256,178 232,150"/>
+  <path d="M 36 28 C 38 32 40 34 41 36 C 40 38 36 40 34 44" fill="none" stroke="#141414" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 41 36 C 44 36 46 35 48 36" fill="none" stroke="#141414" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 30 55 C 34 55 38 54 40 57" fill="none" stroke="#141414" stroke-width="2.2" stroke-linecap="round"/>
 
-    <!-- Thin connector: diamond to book spine -->
-    <rect x="252" y="178" width="8" height="20" rx="4"/>
-
-    <!--
-      Left page of open book.
-      Flat edge on the right (x=252, the spine side).
-      Curves out to the left, peaking at x=118 at mid-height.
-      Path: start top-right → cubic to left-mid → cubic to bottom-right → Z (straight line back up = spine)
-    -->
-    <path d="
-      M 252 197
-      C 218 197 118 232 118 290
-      C 118 348 218 383 252 383
-      Z
-    "/>
-
-    <!--
-      Right page of open book (mirror image).
-      Flat edge on the left (x=260, the spine side).
-      Curves out to the right, peaking at x=394 at mid-height.
-    -->
-    <path d="
-      M 260 197
-      C 294 197 394 232 394 290
-      C 394 348 294 383 260 383
-      Z
-    "/>
-
-  </g>
+  <path d="M 64 28 C 62 32 60 34 59 36 C 60 38 64 40 66 44" fill="none" stroke="#141414" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 59 36 C 56 36 54 35 52 36" fill="none" stroke="#141414" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 70 55 C 66 55 62 54 60 57" fill="none" stroke="#141414" stroke-width="2.2" stroke-linecap="round"/>
 </svg>

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../../hooks/useAuth";
 import PasswordField from "../../components/common/PasswordField";
+import brainLogo from "../../assets/brain-logo.svg";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -38,7 +39,10 @@ export default function LoginPage() {
       <div className="hidden p-8 lg:block">
         <div className="flex h-full flex-col justify-between rounded-[32px] border border-white/10 bg-[#0f0f0f]/90 p-10">
           <div>
-            <p className="mb-4 text-xs uppercase tracking-[0.35em] text-highlight">AI Study Pal</p>
+            <div className="mb-4 flex items-center gap-3">
+              <img src={brainLogo} alt="AI Study Pal" className="h-8 w-8 object-contain" />
+              <p className="text-xs uppercase tracking-[0.35em] text-highlight">AI Study Pal</p>
+            </div>
             <h1 className="max-w-lg font-display text-5xl text-white">
               Sign in to your adaptive learning dashboard.
             </h1>

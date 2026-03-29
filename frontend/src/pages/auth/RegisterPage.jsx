@@ -5,6 +5,7 @@ import api from "../../lib/api";
 import { useAuth } from "../../hooks/useAuth";
 import PasswordField from "../../components/common/PasswordField";
 import PasswordStrengthMeter from "../../components/common/PasswordStrengthMeter";
+import brainLogo from "../../assets/brain-logo.svg";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -120,7 +121,10 @@ export default function RegisterPage() {
       <div className="hidden p-8 lg:block">
         <div className="flex h-full flex-col justify-between rounded-[32px] border border-white/10 bg-[#0f0f0f]/90 p-10">
           <div>
-            <p className="mb-4 text-xs uppercase tracking-[0.35em] text-highlight">Why AI Study Pal?</p>
+            <div className="mb-4 flex items-center gap-3">
+              <img src={brainLogo} alt="AI Study Pal" className="h-8 w-8 object-contain" />
+              <p className="text-xs uppercase tracking-[0.35em] text-highlight">Why AI Study Pal?</p>
+            </div>
             <h2 className="max-w-lg font-display text-5xl text-white leading-tight">
               Master any subject smarter, faster, and with confidence.
             </h2>

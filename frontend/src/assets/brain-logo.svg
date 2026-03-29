@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" width="100" height="80">
+  <!--
+    Brain icon — transparent background, golden fill (#f5a623), cream outline (#fef3c7), black stroke.
+    Symmetrical two-hemisphere design matching the reference image.
+  -->
+
+  <!-- Left hemisphere -->
+  <path
+    d="
+      M 50 12
+      C 45 12 38 13 33 17
+      C 26 22 23 29 24 36
+      C 22 37 19 39 19 43
+      C 19 47 22 50 25 51
+      C 23 54 23 58 26 61
+      C 29 64 34 65 38 63
+      C 40 67 44 69 48 69
+      L 50 69
+      L 50 12
+      Z
+    "
+    fill="#f5a623"
+    stroke="#1a1a1a"
+    stroke-width="2.8"
+    stroke-linejoin="round"
+  />
+
+  <!-- Left hemisphere cream inner glow outline -->
+  <path
+    d="
+      M 50 12
+      C 45 12 38 13 33 17
+      C 26 22 23 29 24 36
+      C 22 37 19 39 19 43
+      C 19 47 22 50 25 51
+      C 23 54 23 58 26 61
+      C 29 64 34 65 38 63
+      C 40 67 44 69 48 69
+      L 50 69
+      L 50 12
+      Z
+    "
+    fill="none"
+    stroke="#fef3c7"
+    stroke-width="1.2"
+    stroke-linejoin="round"
+    opacity="0.7"
+  />
+
+  <!-- Right hemisphere (mirror) -->
+  <path
+    d="
+      M 50 12
+      C 55 12 62 13 67 17
+      C 74 22 77 29 76 36
+      C 78 37 81 39 81 43
+      C 81 47 78 50 75 51
+      C 77 54 77 58 74 61
+      C 71 64 66 65 62 63
+      C 60 67 56 69 52 69
+      L 50 69
+      L 50 12
+      Z
+    "
+    fill="#f5a623"
+    stroke="#1a1a1a"
+    stroke-width="2.8"
+    stroke-linejoin="round"
+  />
+
+  <!-- Right hemisphere cream outline -->
+  <path
+    d="
+      M 50 12
+      C 55 12 62 13 67 17
+      C 74 22 77 29 76 36
+      C 78 37 81 39 81 43
+      C 81 47 78 50 75 51
+      C 77 54 77 58 74 61
+      C 71 64 66 65 62 63
+      C 60 67 56 69 52 69
+      L 50 69
+      L 50 12
+      Z
+    "
+    fill="none"
+    stroke="#fef3c7"
+    stroke-width="1.2"
+    stroke-linejoin="round"
+    opacity="0.7"
+  />
+
+  <!-- Center spine line -->
+  <line x1="50" y1="12" x2="50" y2="69" stroke="#1a1a1a" stroke-width="2"/>
+
+  <!-- Left gyrus folds (the Y-shapes inside left hemisphere) -->
+  <!-- Upper fold -->
+  <path d="M 36 28 C 38 32 40 34 41 36 C 40 38 36 40 34 44" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 41 36 C 44 36 46 35 48 36" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Lower fold -->
+  <path d="M 30 55 C 34 55 38 54 40 57" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- Right gyrus folds (mirrored) -->
+  <!-- Upper fold -->
+  <path d="M 64 28 C 62 32 60 34 59 36 C 60 38 64 40 66 44" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 59 36 C 56 36 54 35 52 36" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Lower fold -->
+  <path d="M 70 55 C 66 55 62 54 60 57" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- Left ear lobe bump -->
+  <path d="M 24 36 C 18 38 17 44 19 47 C 21 50 24 51 25 51" fill="#f5a623" stroke="#1a1a1a" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M 24 36 C 18 38 17 44 19 47 C 21 50 24 51 25 51" fill="none" stroke="#fef3c7" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Right ear lobe bump -->
+  <path d="M 76 36 C 82 38 83 44 81 47 C 79 50 76 51 75 51" fill="#f5a623" stroke="#1a1a1a" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M 76 36 C 82 38 83 44 81 47 C 79 50 76 51 75 51" fill="none" stroke="#fef3c7" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+</svg>

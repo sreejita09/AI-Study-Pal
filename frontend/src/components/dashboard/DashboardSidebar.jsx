@@ -5,6 +5,7 @@ import {
   File, FileType, Presentation, Clock, Layers, Sun, Moon, Palette, RefreshCw, LifeBuoy
 } from "lucide-react";
 import { useTheme, ACCENT_COLORS } from "../../context/ThemeContext";
+import brainLogo from "../../assets/brain-logo.svg";
 
 const TYPE_ICONS = { summary: AlignLeft, notes: StickyNote, quiz: HelpCircle };
 const TYPE_COLORS = { summary: "text-blue-400", notes: "text-purple-400", quiz: "text-green-400" };
@@ -118,6 +119,7 @@ export default function DashboardSidebar({
   if (collapsed) {
     return (
       <aside className="flex h-screen w-16 flex-col items-center border-r bg-[var(--bg-panel)] border-[var(--border-color)] py-4">
+        <img src={brainLogo} alt="AI Study Pal" className="mb-4 h-8 w-8 object-contain" />
         <button
           onClick={onToggleCollapse}
           className="mb-6 rounded-lg bg-[var(--bg-surface)] p-2 text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
@@ -164,7 +166,10 @@ export default function DashboardSidebar({
     <aside className="flex h-screen w-64 flex-col border-r bg-[var(--bg-panel)] border-[var(--border-color)]">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[var(--border-color)] px-4 py-4">
-        <h2 className="font-display text-lg font-bold tracking-wide text-[var(--text-primary)]">AI Study Pal</h2>
+        <div className="flex items-center gap-2">
+          <img src={brainLogo} alt="AI Study Pal" className="h-8 w-8 object-contain" />
+          <h2 className="font-display text-lg font-bold tracking-wide text-[var(--text-primary)]">AI Study Pal</h2>
+        </div>
         <button
           onClick={onToggleCollapse}
           className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
