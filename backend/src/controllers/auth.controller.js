@@ -8,6 +8,17 @@ const { signAuthToken, createEmailVerificationToken } = require("../utils/token"
 const { sendVerificationEmail } = require("../services/email/email.service");
 const { syncLearningProfile } = require("../services/learningEngine");
 
+const EMAIL_SEND_TIMEOUT_MS = 8000;
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    })
+  ]);
+}
+
 function setAuthCookie(res, token) {
   res.cookie(env.cookieName, token, {
     httpOnly: true,
@@ -65,24 +76,27 @@ const register = asyncHandler(async (req, res) => {
     console.error("[register] syncLearningProfile failed (non-fatal):", syncError.message);
   }
 
-  // Send verification email — FATAL: if email fails, roll back the user so
-  // they can register again cleanly once SMTP is fixed. Never lie about "email sent".
+  // Send verification email — non-fatal.
+  // Account creation should not be blocked by SMTP/network latency.
   const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
+  let verificationEmailSent = true;
   try {
-    await sendVerificationEmail({ email: normalizedEmail, username, verificationUrl });
+    await withTimeout(
+      sendVerificationEmail({ email: normalizedEmail, username, verificationUrl }),
+      EMAIL_SEND_TIMEOUT_MS,
+      "sendVerificationEmail"
+    );
   } catch (emailError) {
-    console.error("[register] Email send FAILED — rolling back user creation:", emailError.message);
-    // Clean up so the user isn't stuck with an unverifiable account
-    await LearningProfile.deleteOne({ user: user._id });
-    await User.deleteOne({ _id: user._id });
-    return res.status(500).json({
-      message: "Registration failed: could not send verification email. Please try again or contact support.",
-    });
+    verificationEmailSent = false;
+    console.error("[register] Verification email failed (non-fatal):", emailError.message);
   }
 
   res.status(201).json({
     success: true,
-    message: "Account created. Check your email to verify your account."
+    verificationEmailSent,
+    message: verificationEmailSent
+      ? "Account created. Check your email to verify your account."
+      : "Account created, but verification email could not be sent right now. Please use resend verification."
   });
 });
 
