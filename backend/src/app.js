@@ -18,60 +18,78 @@ const supportRoutes = require("./routes/support.routes");
 const { apiLimiter } = require("./middleware/rateLimit.middleware");
 const { notFound, errorHandler } = require("./middleware/error.middleware");
 
-// Read CLIENT_URL directly from process.env — do NOT fall back to localhost
-// so a missing value is visible rather than silently blocked
-const CLIENT_URL = process.env.CLIENT_URL;
-if (!CLIENT_URL) {
-  console.error(
-    "[CORS] WARNING: CLIENT_URL env var is not set — " +
-    "requests from the production frontend will be blocked. " +
-    "Set CLIENT_URL=https://<your-vercel-app>.vercel.app on Render."
+// ---------------------------------------------------------------------------
+// CORS configuration
+// CLIENT_URL should be set to the Vercel frontend URL on Render.
+// Falls back to the known production URL so the app works even before the
+// env var is configured.
+// ---------------------------------------------------------------------------
+const KNOWN_PRODUCTION_ORIGIN = "https://ai-study-pal-eight.vercel.app";
+const CLIENT_URL = process.env.CLIENT_URL || KNOWN_PRODUCTION_ORIGIN;
+
+if (!process.env.CLIENT_URL) {
+  console.warn(
+    `[CORS] CLIENT_URL env var not set — falling back to ${KNOWN_PRODUCTION_ORIGIN}. ` +
+    "Set CLIENT_URL on Render to silence this warning."
   );
 }
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Log every incoming origin so Render logs make it obvious what's happening
-    console.log(`[CORS] origin: ${origin || "(none — curl/Postman/mobile)"}`);
+console.log(`[CORS] Allowed origin: ${CLIENT_URL}`);
 
-    // Allow requests with no origin (Postman, mobile apps, curl)
+const allowedOrigins = new Set([
+  CLIENT_URL,
+  KNOWN_PRODUCTION_ORIGIN, // always allow the deployed frontend
+]);
+
+const corsOptions = {
+  origin(origin, callback) {
+    console.log(`[CORS] request origin: ${origin || "(none — Postman/curl/mobile)"}`);
+
+    // No origin header → Postman / curl / server-to-server / mobile — allow
     if (!origin) return callback(null, true);
 
-    const allowed = [
-      /^https?:\/\/localhost(:\d+)?$/,   // any localhost port — dev only
-      ...(CLIENT_URL ? [CLIENT_URL] : []),
-    ];
+    // localhost (any port) — allow for local development
+    if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
 
-    const ok = allowed.some((rule) =>
-      rule instanceof RegExp ? rule.test(origin) : rule === origin
-    );
+    if (allowedOrigins.has(origin)) return callback(null, true);
 
-    if (ok) return callback(null, true);
-
-    // Return false (no Access-Control-Allow-Origin header) instead of throwing
-    // an error — throwing causes Express to return 500 on OPTIONS preflight.
-    console.warn(`[CORS] Blocked origin: ${origin}`);
+    console.warn(`[CORS] Blocked unknown origin: ${origin}`);
+    // Pass false — cors will suppress CORS headers but NOT throw → no 500
     callback(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  // 200 instead of default 204 — some older browsers reject 204 on preflight
+  optionsSuccessStatus: 200,
 };
 
 const app = express();
 
-app.use(helmet({ crossOriginResourcePolicy: false }));
+// ---------------------------------------------------------------------------
+// Middleware order — strictly enforced
+// ---------------------------------------------------------------------------
 
-// 1. Handle CORS preflight (OPTIONS) before anything else — prevents 500 on preflight
-app.options("*", cors(corsOptions));
+// STEP 1 — Preflight handler: must be absolute first, before helmet and everything.
+// Two-handler chain: cors() sets headers (or skips), then our explicit handler
+// sends 200. This guarantees OPTIONS NEVER falls through to route handlers.
+app.options("*", cors(corsOptions), (_req, res) => res.sendStatus(200));
 
-// 2. Apply CORS to all routes
+// STEP 2 — Apply CORS headers to all non-OPTIONS requests
 app.use(cors(corsOptions));
 
+// STEP 3 — Security headers (after CORS so preflight isn't affected)
+app.use(helmet({ crossOriginResourcePolicy: false }));
+
+// STEP 4 — Logging
 app.use(morgan("dev"));
+
+// STEP 5 — Body parsing
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// STEP 6 — Rate limiting (OPTIONS never reaches here due to step 1)
 app.use(apiLimiter);
 
 // Root route — used by Render as a health check
