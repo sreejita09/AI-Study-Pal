@@ -8,7 +8,7 @@ import PasswordStrengthMeter from "../../components/common/PasswordStrengthMeter
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, login } = useAuth();
   const [visible, setVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -28,14 +28,16 @@ export default function RegisterPage() {
     if (submitting) return;
     setSubmitting(true);
 
-    const controller = new AbortController();
     try {
-      await api.post("/auth/register", form, {
-        signal: controller.signal,
-        timeout: 45000
-      });
-      toast.success("Account created. Check your email to verify.");
-      navigate("/login");
+      const { data } = await api.post("/auth/register", form, { timeout: 45000 });
+      // Auto-login: store token and user from register response
+      if (data.token) {
+        localStorage.setItem("aistudypal_token", data.token);
+        window.location.href = "/dashboard";
+      } else {
+        toast.success("Account created! Please log in.");
+        navigate("/login");
+      }
     } catch (error) {
       if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
         toast.error("Server is waking up. Please wait a moment and try again.");

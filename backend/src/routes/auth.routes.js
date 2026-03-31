@@ -5,11 +5,9 @@ const { authLimiter } = require("../middleware/rateLimit.middleware");
 const { registerSchema, loginSchema } = require("../validators/auth.validators");
 const {
   register,
-  verifyEmail,
   login,
   me,
   logout,
-  resendVerification,
   devDeleteUser,
   updateProfile,
   changePassword,
@@ -19,9 +17,7 @@ const {
 const router = express.Router();
 
 router.post("/register", authLimiter, validate(registerSchema), register);
-router.get("/verify-email/:token", verifyEmail);
 router.post("/login", authLimiter, validate(loginSchema), login);
-router.post("/resend-verification", authLimiter, resendVerification);
 router.post("/dev-delete-user", devDeleteUser);
 router.get("/me", requireAuth, me);
 router.post("/logout", requireAuth, logout);

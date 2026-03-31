@@ -6,7 +6,6 @@ import ProfilePage from "./pages/ProfilePage";
 import HelpPage from "./pages/HelpPage";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
-import VerifyEmailPage from "./pages/auth/VerifyEmailPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useAuth();
@@ -23,7 +22,6 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
       <Route
         path="/dashboard"
         element={

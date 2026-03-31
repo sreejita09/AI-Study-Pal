@@ -1,11 +1,9 @@
 const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
 const User = require("../models/User");
 const LearningProfile = require("../models/LearningProfile");
 const env = require("../config/env");
 const asyncHandler = require("../utils/asyncHandler");
-const { signAuthToken, createEmailVerificationToken } = require("../utils/token");
-const { sendVerificationEmail } = require("../services/email/email.service");
+const { signAuthToken } = require("../utils/token");
 const { syncLearningProfile } = require("../services/learningEngine");
 
 function setAuthCookie(res, token) {
@@ -21,31 +19,15 @@ const register = asyncHandler(async (req, res) => {
   const { username, email, password } = req.validatedBody;
   const normalizedEmail = email.toLowerCase();
 
-  // ── 1. Check ALL users matching username OR email ──
-  const existingUsers = await User.find({
+  const existing = await User.findOne({
     $or: [{ username }, { email: normalizedEmail }]
   });
 
-  // Block if any verified user holds this username or email
-  const verified = existingUsers.find((u) => u.isEmailVerified);
-  if (verified) {
-    return res.status(409).json({
-      message: "Username or email already exists"
-    });
+  if (existing) {
+    return res.status(409).json({ message: "Username or email already exists" });
   }
 
-  // ── 2. Remove ALL stale unverified duplicates (atomic, parallel) ──
-  if (existingUsers.length > 0) {
-    const ids = existingUsers.map((u) => u._id);
-    await Promise.all([
-      User.deleteMany({ _id: { $in: ids } }),
-      LearningProfile.deleteMany({ user: { $in: ids } })
-    ]);
-  }
-
-  // ── 3. Create user (catch duplicate-key race) ──
   const passwordHash = await bcrypt.hash(password, 12);
-  const tokenBundle = createEmailVerificationToken();
 
   let user;
   try {
@@ -53,24 +35,25 @@ const register = asyncHandler(async (req, res) => {
       username,
       email: normalizedEmail,
       passwordHash,
-      emailVerificationToken: tokenBundle.hashedToken,
-      emailVerificationExpiresAt: tokenBundle.expiresAt
+      isEmailVerified: true
     });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({
-        message: "Username or email already exists. Please try again."
-      });
+      return res.status(409).json({ message: "Username or email already exists" });
     }
     throw err;
   }
 
-  // ── 4. Respond IMMEDIATELY (nothing awaited after this) ──
+  const token = signAuthToken(user._id.toString());
+  setAuthCookie(res, token);
+
   res.status(201).json({
-    message: "Account created. Please verify your email before logging in."
+    message: "Account created",
+    token,
+    user: { id: user._id, username: user.username, email: user.email }
   });
 
-  // ── 5. Background tasks (fire-and-forget) ──
+  // Background: create learning profile
   setImmediate(async () => {
     try {
       await LearningProfile.findOneAndUpdate(
@@ -81,48 +64,13 @@ const register = asyncHandler(async (req, res) => {
     } catch (err) {
       console.error("[register] LearningProfile:", err.message);
     }
-
     try {
       await syncLearningProfile(user);
     } catch (err) {
       console.error("[register] sync:", err.message);
     }
-
-    const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
-    try {
-      await sendVerificationEmail({
-        email: normalizedEmail,
-        username,
-        verificationUrl
-      });
-    } catch (err) {
-      console.error("[register] email:", err.message);
-    }
   });
 });
-const verifyEmail = asyncHandler(async (req, res) => {
-  const tokenHash = crypto
-    .createHash("sha256")
-    .update(req.params.token)
-    .digest("hex");
-
-  const user = await User.findOne({
-    emailVerificationToken: tokenHash,
-    emailVerificationExpiresAt: { $gt: new Date() }
-  });
-
-  if (!user) {
-    return res.status(400).json({ message: "Verification link is invalid or expired" });
-  }
-
-  user.isEmailVerified = true;
-  user.emailVerificationToken = undefined;
-  user.emailVerificationExpiresAt = undefined;
-  await user.save();
-
-  res.json({ message: "Email verified successfully. You can now log in." });
-});
-
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.validatedBody;
 
@@ -135,10 +83,6 @@ const login = asyncHandler(async (req, res) => {
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
   if (!isPasswordValid) {
     return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  if (!user.isEmailVerified) {
-    return res.status(403).json({ message: "Verify your email before logging in" });
   }
 
   const token = signAuthToken(user._id.toString());
@@ -164,40 +108,7 @@ const logout = asyncHandler(async (req, res) => {
   res.json({ message: "Logged out successfully" });
 });
 
-const resendVerification = asyncHandler(async (req, res) => {
-  const email = String(req.body?.email || "")
-    .trim()
-    .toLowerCase();
 
-  if (!email) {
-    return res.status(400).json({ message: "Email is required" });
-  }
-
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res.status(404).json({ message: "No account found for that email" });
-  }
-
-  if (user.isEmailVerified) {
-    return res.json({ message: "This email is already verified." });
-  }
-
-  const tokenBundle = createEmailVerificationToken();
-  user.emailVerificationToken = tokenBundle.hashedToken;
-  user.emailVerificationExpiresAt = tokenBundle.expiresAt;
-  await user.save();
-
-  const verificationUrl = `${env.clientUrl}/verify-email/${tokenBundle.plainToken}`;
-  sendVerificationEmail({
-  email: user.email,
-  username: user.username,
-  verificationUrl
-})
-  .then(() => console.log("EMAIL SENT"))
-  .catch(err => console.error("EMAIL FAILED:", err));
-  res.json({ message: "Verification email sent successfully." });
-});
 
 const devDeleteUser = asyncHandler(async (req, res) => {
   if (env.isProduction) {
@@ -334,11 +245,9 @@ const deleteAccount = asyncHandler(async (req, res) => {
 
 module.exports = {
   register,
-  verifyEmail,
   login,
   me,
   logout,
-  resendVerification,
   devDeleteUser,
   updateProfile,
   changePassword,
